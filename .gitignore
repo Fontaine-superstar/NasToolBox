@@ -1,0 +1,28 @@
+# ===== 构建产物 =====
+[Bb]in/
+[Oo]bj/
+*.xbf
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ===== IDE / 编辑器 =====
+.vs/
+.idea/
+.vscode/
+Folder.DotSettings.user
+*.DotSettings.user
+
+# ===== 本地工作区(AI 会话日志、临时诊断输出等,不进仓库) =====
+.workbuddy/
+
+# ===== 大体积二进制资源 =====
+# Docker 镜像离线包(约 466MB),不随源码分发
+img/*.tar
+
+# ===== 系统文件 =====
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
