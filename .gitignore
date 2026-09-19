@@ -21,6 +21,9 @@ Folder.DotSettings.user
 # Docker 镜像离线包(约 466MB),不随源码分发
 img/*.tar
 
+# ===== 项目文档(内部资料,仅本地保留,不进仓库) =====
+docs/
+
 # ===== 系统文件 =====
 Thumbs.db
 ehthumbs.db
