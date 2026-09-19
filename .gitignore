@@ -1,8 +1,6 @@
 # ===== 构建产物 =====
 [Bb]in/
 [Oo]bj/
-# dotnet publish 输出(含自包含运行时与离线镜像,数百 MB)
-[Pp]ublish/
 *.xbf
 *.user
 *.suo
@@ -31,3 +29,6 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 .DS_Store
+
+# ===== 版本 =====
+Version/
