@@ -1,9 +1,13 @@
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Windows.Graphics;
+using Windows.UI;
+using WinRT.Interop;
 
 namespace NasToolbox;
 
@@ -16,6 +20,13 @@ public sealed partial class SplashWindow : Window
 {
     private const int WidthPx = 560;
     private const int HeightPx = 340;
+
+    // DWMWINDOWATTRIBUTE(dwmapi.h):33 = 窗口圆角策略,34 = 边框颜色
+    private const int DwmwaWindowCornerPreference = 33;
+    private const int DwmwaBorderColor = 34;
+
+    // DWM_WINDOW_CORNER_PREFERENCE:1 = 不圆角(圆角处会露出窗口底色,视觉上就是"白角")
+    private const int DwmwcpDoNotRound = 1;
 
     public SplashWindow()
     {
@@ -42,6 +53,17 @@ public sealed partial class SplashWindow : Window
 
     private void ApplyWindowStyle()
     {
+        // 背景色先落地:后面 DWM 边框要用同一个颜色,否则无边框窗口会留一圈系统默认的浅色描边
+        var background = ResolveBackground();
+        try
+        {
+            Root.Background = new SolidColorBrush(background);
+        }
+        catch
+        {
+            // 保留 XAML 里的 ThemeResource 背景
+        }
+
         try
         {
             var aw = AppWindow;
@@ -57,10 +79,38 @@ public sealed partial class SplashWindow : Window
 
             aw.ResizeClient(new SizeInt32(WidthPx, HeightPx));
             Center(aw);
+
+            PaintBorderLikeContent(aw, background);
         }
         catch
         {
             // 样式设置失败:窗口照常显示,只是带默认边框
+        }
+    }
+
+    /// <summary>
+    /// 消除无边框窗口的白色描边:Windows 11 上即使 SetBorderAndTitleBar(false, false),
+    /// 系统仍会画一圈 1px 边框且默认为浅色;同时圆角外会露出窗口底色。
+    /// 这里把边框色刷成与内容一致的颜色,并关闭圆角(Win10 不支持时静默忽略)。
+    /// </summary>
+    private void PaintBorderLikeContent(AppWindow aw, Color background)
+    {
+        try
+        {
+            var hwnd = WindowNative.GetWindowHandle(this);
+            if (hwnd == IntPtr.Zero) return;
+
+            // 关圆角,避免四角露出浅色底
+            var corner = DwmwcpDoNotRound;
+            DwmSetWindowAttribute(hwnd, DwmwaWindowCornerPreference, ref corner, sizeof(int));
+
+            // 边框色 = 内容背景色(COLORREF 为 0x00BBGGRR)
+            var colorref = background.B << 16 | background.G << 8 | background.R;
+            DwmSetWindowAttribute(hwnd, DwmwaBorderColor, ref colorref, sizeof(int));
+        }
+        catch
+        {
+            // 不支持(如 Win10)或拿不到句柄:保留系统默认边框色
         }
     }
 
@@ -79,6 +129,31 @@ public sealed partial class SplashWindow : Window
         }
     }
 
+    /// <summary>
+    /// 取窗口内容实际使用的背景色,供 DWM 边框保持同色。
+    /// 优先取主题里的 ApplicationPageBackgroundThemeBrush,拿不到就按明暗主题兜底。
+    /// </summary>
+    private Color ResolveBackground()
+    {
+        try
+        {
+            if (Application.Current.Resources.TryGetValue("ApplicationPageBackgroundThemeBrush", out var value)
+                && value is SolidColorBrush brush)
+            {
+                return brush.Color;
+            }
+        }
+        catch
+        {
+            // 资源不可用:走下方兜底
+        }
+
+        var dark = App.Current.RequestedTheme == ApplicationTheme.Dark;
+        return dark
+            ? Color.FromArgb(255, 0x20, 0x20, 0x20)
+            : Color.FromArgb(255, 0xF3, 0xF3, 0xF3);
+    }
+
     /// <summary>取程序集版本的主版本.次版本.修订号(如 0.2.0)。</summary>
     private static string VersionText()
     {
@@ -86,4 +161,7 @@ public sealed partial class SplashWindow : Window
         if (v is null) return "0.2.0";
         return v.Build > 0 ? $"{v.Major}.{v.Minor}.{v.Build}" : $"{v.Major}.{v.Minor}";
     }
+
+    [DllImport("dwmapi.dll", PreserveSig = true)]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int valueSize);
 }

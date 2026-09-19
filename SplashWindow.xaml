@@ -5,8 +5,9 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="NAS 工具箱">
 
-    <!-- 启动画面:无边框小窗,居中显示;进度由 StartupService 驱动 -->
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <!-- 启动画面:无边框小窗,居中显示;进度由 StartupService 驱动。
+         背景色在代码里按主题取实际值并同步给 DWM 边框(消除无边框窗口的白色描边) -->
+    <Grid x:Name="Root" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <StackPanel
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
