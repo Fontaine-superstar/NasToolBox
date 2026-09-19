@@ -6,22 +6,26 @@
     Title="NAS 工具箱">
 
     <!-- 启动画面:无边框小窗,居中显示;进度由 StartupService 驱动。
-         背景色在代码里按主题取实际值并同步给 DWM 边框(消除无边框窗口的白色描边) -->
-    <Grid x:Name="Root" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+         背景色在代码里按主题取实际值并同步给 DWM 边框与窗口底色(消除无边框窗口的白色描边)。
+         Margin="-1":XAML 岛未必铺满客户区最外一圈(顶部常见 1px 露白),让内容外扩 1px 盖住它。 -->
+    <Grid
+        x:Name="Root"
+        Margin="-1"
+        Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <StackPanel
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
-            Spacing="6">
+            Padding="56,40">
 
             <FontIcon
                 Glyph="&#xE8B7;"
-                FontSize="44"
+                FontSize="40"
                 HorizontalAlignment="Center"
-                Margin="0,0,0,10" />
+                Margin="0,0,0,14" />
 
             <TextBlock
                 Text="NAS 工具箱"
-                FontSize="22"
+                FontSize="21"
                 FontWeight="SemiBold"
                 HorizontalAlignment="Center" />
 
@@ -29,13 +33,13 @@
                 x:Name="VerText"
                 Text="v0.2.0"
                 FontSize="12"
-                Opacity="0.6"
+                Opacity="0.5"
                 HorizontalAlignment="Center"
-                Margin="0,0,0,22" />
+                Margin="0,4,0,30" />
 
             <ProgressBar
                 x:Name="Bar"
-                Width="300"
+                Width="320"
                 Minimum="0"
                 Maximum="100"
                 Value="0"
@@ -46,9 +50,9 @@
                 x:Name="StatusText"
                 Text="正在启动…"
                 FontSize="12"
-                Opacity="0.8"
+                Opacity="0.75"
                 HorizontalAlignment="Center"
-                Margin="0,8,0,0" />
+                Margin="0,16,0,0" />
         </StackPanel>
     </Grid>
 </Window>

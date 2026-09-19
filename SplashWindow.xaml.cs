@@ -18,8 +18,8 @@ namespace NasToolbox;
 /// </summary>
 public sealed partial class SplashWindow : Window
 {
-    private const int WidthPx = 560;
-    private const int HeightPx = 340;
+    private const int WidthPx = 540;
+    private const int HeightPx = 320;
 
     // DWMWINDOWATTRIBUTE(dwmapi.h):2 = 非客户区渲染策略,33 = 窗口圆角策略,34 = 边框颜色
     private const int DwmwaNcRenderingPolicy = 2;
@@ -46,7 +46,14 @@ public sealed partial class SplashWindow : Window
     private const uint SwpNoActivate = 0x0010;
     private const uint SwpFrameChanged = 0x0020;
 
+    // 窗口类背景画刷(把客户区未被 XAML 覆盖的那 1px 也刷成内容色)
+    private const int GclpHbrBackground = -10;
+
     private Color _background;
+
+    private IntPtr _classBrush;
+    private IntPtr _oldClassBrush;
+    private bool _classBrushSet;
 
     public SplashWindow()
     {
@@ -66,6 +73,9 @@ public sealed partial class SplashWindow : Window
         // 首次激活时窗口已完全创建,再剥一次边框:
         // WinUI 在 Show/Activate 之后可能重新应用窗口样式,只做一次会被覆盖回来
         Activated += (_, _) => StripFrame();
+
+        // 窗口类背景画刷是同类窗口共享的,关掉时还原
+        Closed += (_, _) => RestoreClassBrush();
     }
 
     /// <summary>更新进度(必须在 UI 线程调用;StartupService 在 await 后回到 UI 线程)。</summary>
@@ -146,14 +156,58 @@ public sealed partial class SplashWindow : Window
             var corner = DwmwcpDoNotRound;
             DwmSetWindowAttribute(hwnd, DwmwaWindowCornerPreference, ref corner, sizeof(int));
 
-            var colorref = _background.B << 16 | _background.G << 8 | _background.R;
+            var colorref = ColorRefOf(_background);
             DwmSetWindowAttribute(hwnd, DwmwaBorderColor, ref colorref, sizeof(int));
+
+            // ④ 窗口底色:WinUI 的 XAML 岛常常没有铺满客户区最外一圈(尤其顶部 1px),
+            //    那里露出的是窗口类背景(默认白色)。把它也刷成内容色,视觉上就消失了。
+            if (!_classBrushSet)
+            {
+                var brush = CreateSolidBrush(colorref);
+                if (brush != IntPtr.Zero)
+                {
+                    _oldClassBrush = GetClassLongPtr(hwnd, GclpHbrBackground);
+                    SetClassLongPtr(hwnd, GclpHbrBackground, brush);
+                    InvalidateRect(hwnd, IntPtr.Zero, true);
+                    _classBrush = brush;
+                    _classBrushSet = true;
+                }
+            }
         }
         catch
         {
             // 拿不到句柄或系统不支持:保留系统默认外观
         }
     }
+
+    /// <summary>窗口关闭时还原窗口类背景画刷并释放 GDI 对象,避免影响同类的其他窗口。</summary>
+    private void RestoreClassBrush()
+    {
+        if (!_classBrushSet) return;
+        _classBrushSet = false;
+        try
+        {
+            var hwnd = WindowNative.GetWindowHandle(this);
+            if (hwnd != IntPtr.Zero)
+            {
+                SetClassLongPtr(hwnd, GclpHbrBackground, _oldClassBrush);
+                InvalidateRect(hwnd, IntPtr.Zero, true);
+            }
+        }
+        catch
+        {
+            // 还原失败:只影响后续窗口的底色,不影响功能
+        }
+
+        if (_classBrush != IntPtr.Zero)
+        {
+            DeleteObject(_classBrush);
+            _classBrush = IntPtr.Zero;
+        }
+    }
+
+    /// <summary>转成 COLORREF(0x00BBGGRR,注意字节序与 RGB 相反)。</summary>
+    private static int ColorRefOf(Color c) => c.B << 16 | c.G << 8 | c.R;
 
     private static void Center(AppWindow aw)
     {
@@ -215,4 +269,21 @@ public sealed partial class SplashWindow : Window
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter, int x, int y, int cx, int cy, uint flags);
+
+    [DllImport("user32.dll", EntryPoint = "GetClassLongPtr")]
+    private static extern IntPtr GetClassLongPtr(IntPtr hwnd, int index);
+
+    [DllImport("user32.dll", EntryPoint = "SetClassLongPtr")]
+    private static extern IntPtr SetClassLongPtr(IntPtr hwnd, int index, IntPtr newLong);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool InvalidateRect(IntPtr hwnd, IntPtr rect, bool erase);
+
+    [DllImport("gdi32.dll")]
+    private static extern IntPtr CreateSolidBrush(int colorref);
+
+    [DllImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeleteObject(IntPtr obj);
 }
