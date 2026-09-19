@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="NasToolbox.SplashWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="NAS 工具箱">
+
+    <!-- 启动画面:无边框小窗,居中显示;进度由 StartupService 驱动 -->
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <StackPanel
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Spacing="6">
+
+            <FontIcon
+                Glyph="&#xE8B7;"
+                FontSize="44"
+                HorizontalAlignment="Center"
+                Margin="0,0,0,10" />
+
+            <TextBlock
+                Text="NAS 工具箱"
+                FontSize="22"
+                FontWeight="SemiBold"
+                HorizontalAlignment="Center" />
+
+            <TextBlock
+                x:Name="VerText"
+                Text="v0.2.0"
+                FontSize="12"
+                Opacity="0.6"
+                HorizontalAlignment="Center"
+                Margin="0,0,0,22" />
+
+            <ProgressBar
+                x:Name="Bar"
+                Width="300"
+                Minimum="0"
+                Maximum="100"
+                Value="0"
+                ShowError="False"
+                IsIndeterminate="False" />
+
+            <TextBlock
+                x:Name="StatusText"
+                Text="正在启动…"
+                FontSize="12"
+                Opacity="0.8"
+                HorizontalAlignment="Center"
+                Margin="0,8,0,0" />
+        </StackPanel>
+    </Grid>
+</Window>

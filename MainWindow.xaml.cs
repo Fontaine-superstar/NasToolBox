@@ -27,11 +27,11 @@ public sealed partial class MainWindow : Window
         // 最小窗口 850×700:AppWindow 无原生 MinSize,经 Changed 事件把小于下限的尺寸顶回
         WindowLimits.ApplyMinSize(this, 850, 700);
 
-        // 启动即后台检测一遍全部设备并落盘,之后打开设备页 / 首页就能立刻看到状态
-        _ = DeviceProbeService.ProbeAndPersistAsync();
-
-        // 启动即后台预取当前设备的 NAS 状态:点开「NAS 状态」页时先用缓存上屏,无需等待
-        NasStatusService.PrefetchOnStartup();
+        // 启动任务(设备在线探测 / NAS 状态预取)已移交 StartupService,由启动画面显示真实进度,
+        // 探测超时后仍在后台继续跑,结果照样落盘。
+        // 这里先把首页导航好:主窗口激活时内容已就绪,不会先闪一下空白。
+        // 未激活时 XamlRoot 可能尚未就绪,失败也无妨 —— 激活后侧栏默认选中项会再导航一次。
+        try { NavFrame.Navigate(typeof(DashboardPage)); } catch { }
     }
 
     /// <summary>按侧栏 Tag 切换页面(供页面内跳转,如测速页跳到 Docker 管理),同时保持侧栏高亮同步。</summary>

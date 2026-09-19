@@ -124,12 +124,15 @@ public static class NasStatusService
     public static string Key(NasDevice d) => d.SshCacheKey;
 
     /// <summary>软件启动时后台预取当前设备的状态,页面点开即有数据可显示。</summary>
-    public static void PrefetchOnStartup()
+    /// <summary>
+    /// 启动预取:返回 Task 以便启动流程(StartupService)把它算作一个进度步骤并可设超时。
+    /// 无当前设备时直接返回已完成。
+    /// </summary>
+    public static Task PrefetchOnStartupAsync()
     {
         var devices = NasDeviceStore.Load();
         var current = NasDeviceStore.GetCurrentOrDefault(devices);
-        if (current is null) return;
-        _ = FetchAsync(current);
+        return current is null ? Task.CompletedTask : FetchAsync(current);
     }
 
     /// <summary>采集一台设备的状态;成功结果写入缓存。失败不抛异常,以 Error 字段返回。</summary>
