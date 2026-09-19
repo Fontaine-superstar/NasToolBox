@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    NAS 工具箱 - WinUI 3 (.NET 10)
+    设备管理 / 网络诊断 / SMB 共享 / 磁盘空间 / Wake-on-LAN / 绿色工具库
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>NasToolbox</RootNamespace>
+    <AssemblyName>NasToolbox</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x86;x64;ARM64</Platforms>
+    <!-- 未指定 RID 时按当前进程架构选择,保证 dotnet run / dotnet publish 可直接用 -->
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <!-- 默认"非打包(Unpackaged)"形态:免 MSIX、解压即用 -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>0.2.0</Version>
+    <!-- 永不裁剪:WinUI3 反射依赖多,Trim 不安全 -->
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7705" />
+    <!-- SSH.NET:必须用新包 ID「SSH.NET」(2026.x,修复 CVE-2026-85756 / CVE-2026-48798);
+         旧包 ID「Renci.SshNet」停在 1.0.0,只支持 OpenSSH 8.2 之前的老算法,现代 NAS 上握手会被服务端直接断开 -->
+    <PackageReference Include="SSH.NET" Version="2026.0.0" />
+    <!-- WMI 查询(首页系统摘要) -->
+    <PackageReference Include="System.Management" Version="10.0.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 图标提取用到 System.Drawing 的完整能力 -->
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+  </ItemGroup>
+
+  <!-- Tools/(第三方工具,按中文分类文件夹组织)与 Metadata/ 随构建输出;img\ 为随附的建议镜像 tar;
+       Assets\Terminal\ 为内嵌终端的 xterm.js 离线资源(终端页 WebView2 经虚拟主机加载) -->
+  <ItemGroup>
+    <Content Include="Tools\**\*" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <Content Include="Metadata\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="img\**\*" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <Content Include="Assets\Terminal\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="xterm.css" />
+<style>
+  html, body { margin:0; padding:0; height:100%; background:#1e1e1e; overflow:hidden; }
+  #term { height:100%; padding:4px 6px; box-sizing:border-box; }
+</style>
+</head>
+<body>
+<div id="term"></div>
+<script src="xterm.js"></script>
+<script src="xterm-addon-fit.js"></script>
+<script>
+(function () {
+  var term = new Terminal({
+    cursorBlink: true,
+    fontFamily: "Cascadia Mono,Consolas,monospace",
+    fontSize: 13,
+    theme: { background: "#1e1e1e" }
+  });
+  var fit = new FitAddon.FitAddon();
+  term.loadAddon(fit);
+  term.open(document.getElementById("term"));
+  fit.fit();
+
+  var post = function (obj) { window.chrome.webview.postMessage(JSON.stringify(obj)); };
+
+  // 上行:键击 / 尺寸变化(alt = 是否处于备用屏:vim/top 期间 C# 侧跳过重建 shell)
+  term.onData(function (d) { post({ type: "input", data: d }); });
+  term.onResize(function (sz) {
+    post({ type: "resize", cols: sz.cols, rows: sz.rows,
+           alt: term.buffer.active.type === "alternate" });
+  });
+
+  // 下行:write(远端输出/提示文字)/ reset(重连前清屏)
+  window.chrome.webview.addEventListener("message", function (e) {
+    var m = e.data;
+    if (typeof m === "string") { try { m = JSON.parse(m); } catch (_) { return; } }
+    if (!m || !m.type) return;
+    if (m.type === "write") term.write(m.data);
+    else if (m.type === "reset") { term.reset(); term.focus(); }
+  });
+
+  window.addEventListener("resize", function () { fit.fit(); });
+
+  post({ type: "ready", cols: term.cols, rows: term.rows });
+  term.focus();
+})();
+</script>
+</body>
+</html>

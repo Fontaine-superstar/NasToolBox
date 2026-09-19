@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="NasToolbox.Pages.DockerPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:NasToolbox.Models"
+    xmlns:conv="using:NasToolbox.Converters"
+    mc:Ignorable="d"
+    NavigationCacheMode="Enabled">
+
+    <Grid Padding="24,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <TextBlock Text="Docker 容器管理" Style="{StaticResource TitleTextBlockStyle}" />
+                <ProgressRing x:Name="BusyRing" Width="18" Height="18" VerticalAlignment="Center"
+                              Visibility="Collapsed" IsActive="True" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <ComboBox x:Name="DeviceBox" Width="240" Header="设备"
+                          DisplayMemberPath="DisplayName" SelectionChanged="DeviceBox_SelectionChanged" />
+                <Button Content="部署容器" Click="DeployBtn_Click" VerticalAlignment="Bottom" />
+                <Button Content="刷新" Style="{StaticResource AccentButtonStyle}"
+                        Click="RefreshBtn_Click" VerticalAlignment="Bottom" />
+            </StackPanel>
+        </Grid>
+
+        <TextBlock x:Name="StatusText" Grid.Row="1" FontSize="12" Opacity="0.7"
+                   Margin="0,0,0,8" TextWrapping="Wrap" Text="" />
+
+        <!-- 二级侧边栏:概览 / 容器 / Compose / 本地镜像 / 网络 -->
+        <Grid Grid.Row="2" ColumnDefinitions="176,*" ColumnSpacing="14">
+            <ListView x:Name="SectionNav" SelectionMode="Single" IsItemClickEnabled="False"
+                      SelectionChanged="SectionNav_SelectionChanged">
+                <ListViewItem Tag="overview">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon Glyph="&#xE80F;" FontSize="16" />
+                        <TextBlock Text="概览" />
+                    </StackPanel>
+                </ListViewItem>
+                <ListViewItem Tag="containers">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon Glyph="&#xE7B8;" FontSize="16" />
+                        <TextBlock Text="容器" />
+                    </StackPanel>
+                </ListViewItem>
+                <ListViewItem Tag="compose">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon Glyph="&#xE7C3;" FontSize="16" />
+                        <TextBlock Text="Compose" />
+                    </StackPanel>
+                </ListViewItem>
+                <ListViewItem Tag="images">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon Glyph="&#xE8A1;" FontSize="16" />
+                        <TextBlock Text="本地镜像" />
+                    </StackPanel>
+                </ListViewItem>
+                <ListViewItem Tag="networks">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon Glyph="&#xE774;" FontSize="16" />
+                        <TextBlock Text="网络" />
+                    </StackPanel>
+                </ListViewItem>
+            </ListView>
+
+            <Grid Grid.Column="1">
+                <!-- 容器 -->
+                <StackPanel x:Name="ContainerPanel">
+                    <ListView x:Name="ContainerList" SelectionMode="None">
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="models:DockerContainer">
+                    <Border
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,8">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <!-- 标题行:状态点 + 名称/镜像 + 状态文本 -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Ellipse Width="10" Height="10" VerticalAlignment="Center"
+                                         Fill="{x:Bind StateBrush}" />
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Spacing="1">
+                                    <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="14" />
+                                    <TextBlock Text="{x:Bind Image}" FontSize="11" Opacity="0.6" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Text="{x:Bind StateText}" Foreground="{x:Bind StateBrush}"
+                                           VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" />
+                            </Grid>
+
+                            <!-- 运行时长 / 详细状态 -->
+                            <TextBlock Grid.Row="1" Margin="0,8,0,0" FontSize="12" Opacity="0.75"
+                                       Text="{x:Bind Status}" TextWrapping="Wrap" />
+
+                            <!-- 端口映射(空时隐藏) -->
+                            <TextBlock Grid.Row="2" Margin="0,4,0,0" FontSize="11" Opacity="0.55"
+                                       Text="{x:Bind Ports}" TextWrapping="Wrap"
+                                       Visibility="{x:Bind conv:Conv.WhenNotEmpty(Ports)}" />
+
+                            <!-- 操作栏:启动/停止/重启/日志靠左,删除靠右 -->
+                            <Grid Grid.Row="3" Margin="0,10,0,0" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+                                <!-- 互斥显示:运行中显示「停止」,已停止显示「启动」 -->
+                                <Button Content="启动" Click="StartBtn_Click" FontSize="12" Padding="10,4"
+                                        Visibility="{x:Bind conv:Conv.WhenTrue(CanStart)}" />
+                                <Button Content="停止" Click="StopBtn_Click" FontSize="12" Padding="10,4"
+                                        Visibility="{x:Bind conv:Conv.WhenTrue(CanStop)}" />
+                                <Button Grid.Column="1" Content="重启" Click="RestartBtn_Click" FontSize="12" Padding="10,4"
+                                        Visibility="{x:Bind conv:Conv.WhenTrue(CanStop)}" />
+                                <Button Grid.Column="2" Content="日志" Click="LogsBtn_Click" FontSize="12" Padding="10,4" />
+                                <Button Grid.Column="5" Content="删除" Click="RemoveBtn_Click" FontSize="12" Padding="10,4"
+                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+                    <StackPanel x:Name="EmptyHint" Visibility="Collapsed"
+                                HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+            <FontIcon Glyph="&#xE7B8;" FontSize="36" />
+            <TextBlock x:Name="EmptyText" Text="还没有 NAS 设备" HorizontalAlignment="Center" />
+            <TextBlock Text="到「设备管理」添加设备并配置 SSH 后,即可在这里管理 Docker 容器" Opacity="0.6"
+                       FontSize="12" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 概览 -->
+                <StackPanel x:Name="OverviewPanel" Visibility="Collapsed" Spacing="12">
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1" CornerRadius="8" Padding="16,12">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="Docker 概览" Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="14">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Docker 版本" FontSize="12" Opacity="0.6" />
+                                    <TextBlock x:Name="OvVersion" FontSize="18" FontWeight="SemiBold" Text="—" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBlock Text="容器总数" FontSize="12" Opacity="0.6" />
+                                    <TextBlock x:Name="OvContainers" FontSize="18" FontWeight="SemiBold" Text="—" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="2">
+                                    <TextBlock Text="运行中" FontSize="12" Opacity="0.6" />
+                                    <TextBlock x:Name="OvRunning" FontSize="18" FontWeight="SemiBold" Text="—" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="1" Spacing="2">
+                                    <TextBlock Text="已停止" FontSize="12" Opacity="0.6" />
+                                    <TextBlock x:Name="OvStopped" FontSize="18" FontWeight="SemiBold" Text="—" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
+                                    <TextBlock Text="本地镜像" FontSize="12" Opacity="0.6" />
+                                    <TextBlock x:Name="OvImages" FontSize="18" FontWeight="SemiBold" Text="—" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="1" Grid.Column="2" Spacing="2">
+                                    <TextBlock Text="网络" FontSize="12" Opacity="0.6" />
+                                    <TextBlock x:Name="OvNetworks" FontSize="18" FontWeight="SemiBold" Text="—" />
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="切换左侧分区可管理容器、Compose 项目、本地镜像与网络;数据随所选设备刷新。"
+                               FontSize="11" Opacity="0.6" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <!-- Compose -->
+                <StackPanel x:Name="ComposePanel" Visibility="Collapsed" Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto,Auto">
+                        <TextBlock Text="Compose 项目" Style="{StaticResource SubtitleTextBlockStyle}"
+                                   VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Content="部署 Compose" Click="ComposeDeployBtn_Click" />
+                        <Button Grid.Column="2" Content="刷新" Click="ComposeRefreshBtn_Click" Margin="8,0,0,0" />
+                    </Grid>
+                    <TextBlock Text="部署方式:填 NAS 上已有的 compose 文件路径,或选择本机文件(自动上传到 /tmp 后执行 up -d)。对项目可执行启动 / 停止 / 重启 / 下线(下线会移除容器与网络)。"
+                               FontSize="11" Opacity="0.6" TextWrapping="Wrap" />
+                    <ListView x:Name="ComposeList" SelectionMode="None">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:DockerComposeProject">
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,8">
+                                    <StackPanel Spacing="6">
+                                        <StackPanel>
+                                            <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{x:Bind Status}" FontSize="11" Opacity="0.65" />
+                                            <TextBlock Text="{x:Bind ConfigFiles}" FontSize="11" Opacity="0.5"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Button Content="启动" Click="ComposeStartBtn_Click" FontSize="12" Padding="10,4" />
+                                            <Button Content="停止" Click="ComposeStopBtn_Click" FontSize="12" Padding="10,4" />
+                                            <Button Content="重启" Click="ComposeRestartBtn_Click" FontSize="12" Padding="10,4" />
+                                            <Button Content="下线" Click="ComposeDownBtn_Click" FontSize="12" Padding="10,4"
+                                                    Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                    <TextBlock x:Name="ComposeEmpty" Text="没有 Compose 项目" Visibility="Collapsed"
+                               Opacity="0.6" HorizontalAlignment="Center" />
+                </StackPanel>
+
+                <!-- 本地镜像:本机(img\) + NAS 端 -->
+                <ScrollViewer x:Name="ImagesPanel" Visibility="Collapsed">
+                    <StackPanel Spacing="14">
+
+                        <!-- 本机镜像:应用目录 img\ 下的 tar -->
+                        <StackPanel Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="本机镜像(img\ 文件夹)" Style="{StaticResource SubtitleTextBlockStyle}"
+                                           VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Content="刷新" Click="LocalImagesRefreshBtn_Click" />
+                            </Grid>
+                            <TextBlock x:Name="LocalImgDirHint" FontSize="11" Opacity="0.6" TextWrapping="Wrap" Text="" />
+                            <ListView x:Name="LocalImagesList" SelectionMode="None">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="models:LocalImageFile">
+                                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,8">
+                                            <Grid ColumnDefinitions="*,Auto,Auto">
+                                                <StackPanel>
+                                                    <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" />
+                                                    <TextBlock FontSize="11" Opacity="0.55">
+                                                        <Run Text="{x:Bind SizeText}" /> · <Run Text="{x:Bind ModifiedText}" />
+                                                    </TextBlock>
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Content="导入到 NAS" Click="LoadLocalImageBtn_Click" FontSize="12"
+                                                        Padding="10,4" Margin="12,0,0,0" VerticalAlignment="Center" />
+                                                <Button Grid.Column="2" Content="删除" Click="DeleteLocalImageBtn_Click" FontSize="12"
+                                                        Padding="10,4" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                            <TextBlock x:Name="LocalImagesEmpty" Text="本机 img\ 文件夹内没有镜像 tar" Visibility="Collapsed"
+                                       Opacity="0.6" HorizontalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- NAS 端本地镜像 -->
+                        <StackPanel Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto,Auto">
+                                <TextBlock Text="NAS 端本地镜像" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Content="清理悬空镜像" Click="PruneImagesBtn_Click" />
+                        <Button Grid.Column="2" Content="刷新" Click="ImagesRefreshBtn_Click" Margin="8,0,0,0" />
+                    </Grid>
+                    <ListView x:Name="ImagesList" SelectionMode="None">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:DockerImage">
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,8">
+                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                                        <StackPanel>
+                                            <TextBlock Text="{x:Bind DisplayTag}" FontWeight="SemiBold" />
+                                            <TextBlock FontSize="11" Opacity="0.55" Text="{x:Bind Id}" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{x:Bind Size}" VerticalAlignment="Center"
+                                                   Margin="12,0,0,0" FontSize="12" Opacity="0.8" />
+                                        <TextBlock Grid.Column="2" Text="{x:Bind Created}" VerticalAlignment="Center"
+                                                   Margin="12,0,0,0" FontSize="12" Opacity="0.6" />
+                                        <Button Grid.Column="3" Content="删除" Click="RemoveImageBtn_Click" FontSize="12"
+                                                Padding="10,4" Margin="12,0,0,0" VerticalAlignment="Center"
+                                                Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                            <TextBlock x:Name="ImagesEmpty" Text="NAS 上没有本地镜像" Visibility="Collapsed"
+                                       Opacity="0.6" HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- 网络 -->
+                <StackPanel x:Name="NetworksPanel" Visibility="Collapsed" Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Docker 网络" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Content="刷新" Click="NetworksRefreshBtn_Click" />
+                    </Grid>
+                    <ListView x:Name="NetworksList" SelectionMode="None">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:DockerNetwork">
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,8">
+                                    <Grid ColumnDefinitions="*,Auto,Auto">
+                                        <StackPanel>
+                                            <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" />
+                                            <TextBlock FontSize="11" Opacity="0.55" Text="{x:Bind Driver}" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="内置" FontSize="11" Opacity="0.5"
+                                                   VerticalAlignment="Center" Margin="12,0,0,0"
+                                                   Visibility="{x:Bind conv:Conv.WhenTrue(Builtin)}" />
+                                        <Button Grid.Column="2" Content="删除" Click="RemoveNetworkBtn_Click" FontSize="12"
+                                                Padding="10,4" Margin="12,0,0,0" VerticalAlignment="Center"
+                                                Visibility="{x:Bind conv:Conv.WhenTrue(CanDelete)}"
+                                                Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                    <TextBlock x:Name="NetworksEmpty" Text="没有网络" Visibility="Collapsed"
+                               Opacity="0.6" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <ContentDialog
+            x:Name="LogDialog"
+            Title="容器日志"
+            CloseButtonText="关闭">
+            <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="6" Padding="10,8"
+                    MaxHeight="460" MinHeight="200">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <TextBlock x:Name="LogText" FontFamily="Cascadia Mono,Consolas" FontSize="12"
+                               IsTextSelectionEnabled="True" TextWrapping="Wrap" Text="" />
+                </ScrollViewer>
+            </Border>
+        </ContentDialog>
+
+        <!-- 部署新容器 -->
+        <ContentDialog
+            x:Name="CreateDialog"
+            Title="部署新容器"
+            PrimaryButtonText="部署"
+            CloseButtonText="取消"
+            DefaultButton="Primary"
+            PrimaryButtonClick="CreateDialog_PrimaryButtonClick">
+            <StackPanel Spacing="10" MinWidth="440" MaxWidth="480">
+                <!-- 建议镜像:来自应用目录 img\ 下的 tar,点击填入,部署时优先本地导入 -->
+                <StackPanel x:Name="SuggestPanel" Spacing="6">
+                    <TextBlock Text="建议镜像(来自 img\ 文件夹;选用后部署时自动上传并 docker load,不走拉取)"
+                               FontSize="12" Opacity="0.6" TextWrapping="Wrap" />
+                    <ListView x:Name="SuggestList" SelectionMode="None" IsItemClickEnabled="True"
+                              ItemClick="SuggestChip_Click">
+                        <ListView.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="8" />
+                            </ItemsPanelTemplate>
+                        </ListView.ItemsPanel>
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:LocalImageFile">
+                                <Button Content="{x:Bind Name}" FontSize="12" Padding="10,4" />
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+                <TextBox x:Name="CdImageBox" Header="镜像(仓库:标签)"
+                         PlaceholderText="例:badapple9/speedtest-x 或 nginx:latest"
+                         TextChanged="CdImageBox_TextChanged" />
+                <TextBox x:Name="CdNameBox" Header="容器名(可留空,留空自动随机命名)"
+                         PlaceholderText="例:speedtest-x" />
+                <TextBox x:Name="CdPortsBox" Header="端口映射 宿主:容器(多项逗号分隔,可留空)"
+                         PlaceholderText="例:9001:80, 8080:8080" />
+                <ComboBox x:Name="CdRestartBox" Header="重启策略" SelectedIndex="0"
+                          HorizontalAlignment="Stretch">
+                    <ComboBoxItem Content="unless-stopped(推荐:异常 / 开机自动拉起)" />
+                    <ComboBoxItem Content="always" />
+                    <ComboBoxItem Content="no(不自动重启)" />
+                </ComboBox>
+                <CheckBox x:Name="CdPullBox" IsChecked="True"
+                          Content="部署前先拉取镜像(docker pull;首次部署或更新版本时勾选)" />
+                <InfoBar x:Name="CdError" IsOpen="False" Severity="Error" />
+            </StackPanel>
+        </ContentDialog>
+
+        <!-- 部署 Compose -->
+        <ContentDialog
+            x:Name="ComposeDeployDialog"
+            Title="部署 Compose"
+            PrimaryButtonText="部署(up -d)"
+            CloseButtonText="取消"
+            DefaultButton="Primary"
+            PrimaryButtonClick="ComposeDeployDialog_PrimaryButtonClick">
+            <StackPanel Spacing="10" MinWidth="460">
+                <TextBox x:Name="CpRemoteBox" Header="NAS 上的 compose 文件路径(与下方二选一)"
+                         PlaceholderText="例:/volume1/docker/app/docker-compose.yml" />
+                <TextBlock Text="—— 或 ——" FontSize="12" Opacity="0.5" HorizontalAlignment="Center" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBox x:Name="CpLocalBox" Header="本机 compose 文件(自动上传到 /tmp/nastb-compose/ 后部署)"
+                             IsReadOnly="True" PlaceholderText="未选择" />
+                    <Button Grid.Column="1" Content="浏览…" Click="CpPickBtn_Click"
+                            VerticalAlignment="Bottom" Margin="8,0,0,0" />
+                </Grid>
+                <TextBlock Text="仅上传所选的单个 compose 文件;文件里引用的相对路径(build 上下文、env 文件等)需已在 NAS 上存在。"
+                           FontSize="11" Opacity="0.6" TextWrapping="Wrap" />
+                <InfoBar x:Name="CpError" IsOpen="False" Severity="Error" />
+            </StackPanel>
+        </ContentDialog>
+    </Grid>
+</Page>

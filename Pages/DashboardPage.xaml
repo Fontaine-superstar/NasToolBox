@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="NasToolbox.Pages.DashboardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:NasToolbox.Models"
+    mc:Ignorable="d">
+
+    <ScrollViewer>
+        <StackPanel Padding="24,16" Spacing="12" MaxWidth="920" HorizontalAlignment="Left">
+
+            <TextBlock Text="首页概览" Style="{StaticResource TitleTextBlockStyle}" Margin="0,0,0,4" />
+
+            <!-- 本机信息:网络 + 硬件摘要 -->
+            <Border
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1" CornerRadius="8" Padding="16,12">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="本机信息" Style="{StaticResource SubtitleTextBlockStyle}" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE77B;" />
+                        <TextBlock Text="主机名" Width="88" />
+                        <TextBlock x:Name="HostText" Text="检测中…" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE774;" />
+                        <TextBlock Text="本机 IPv4" Width="88" />
+                        <TextBlock x:Name="IpText" Text="检测中…" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE701;" />
+                        <TextBlock Text="默认网关" Width="88" />
+                        <TextBlock x:Name="GwText" Text="检测中…" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE950;" />
+                        <TextBlock Text="处理器" Width="88" />
+                        <TextBlock x:Name="CpuText" Text="检测中…" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xEA86;" />
+                        <TextBlock Text="内存" Width="88" />
+                        <TextBlock x:Name="MemText" Text="检测中…" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE770;" />
+                        <TextBlock Text="系统" Width="88" />
+                        <TextBlock x:Name="OsText" Text="检测中…" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE823;" />
+                        <TextBlock Text="开机时长" Width="88" />
+                        <TextBlock x:Name="UpText" Text="检测中…" TextWrapping="Wrap" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- NAS 设备速览 -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="NAS 设备信息" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button x:Name="CheckAllBtn" Content="检测全部" Click="CheckAllBtn_Click" />
+                </StackPanel>
+            </Grid>
+            <Border
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1" CornerRadius="8" Padding="8,4">
+                <StackPanel>
+                    <ListView x:Name="DeviceList" SelectionMode="None" IsItemClickEnabled="False">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:DeviceRow">
+                                <Grid Padding="8,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <!-- x:Bind 默认 OneTime,状态刷新必须显式指定 OneWay -->
+                                    <Ellipse Width="10" Height="10" Fill="{x:Bind StatusBrush, Mode=OneWay}" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{x:Bind Device.DisplayName}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{x:Bind Device.Host}" FontSize="11" Opacity="0.65" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="{x:Bind StatusText, Mode=OneWay}" Foreground="{x:Bind StatusBrush, Mode=OneWay}"
+                                               VerticalAlignment="Center" FontSize="12" Margin="0,0,8,0" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                    <TextBlock x:Name="DevEmptyHint" Text="还没有 NAS 设备 —— 到左侧「设备管理」页添加"
+                               Visibility="Collapsed" Margin="12" Opacity="0.6" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <InfoBar
+                IsOpen="True"
+                Severity="Informational"
+                Title="提示"
+                Message="Ping / 端口 / DNS 诊断见「网络诊断」;SMB 共享浏览与本机磁盘空间见「磁盘与共享」;第三方绿色工具放入 Tools\ 分类目录后出现在「工具库」。" />
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>
