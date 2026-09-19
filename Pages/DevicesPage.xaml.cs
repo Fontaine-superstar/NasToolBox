@@ -156,6 +156,33 @@ public sealed partial class DevicesPage : Page
 
     // ---------- 编辑对话框 ----------
 
+    /// <summary>设备行的「环境自检」:弹窗列出该 NAS 的组件齐备情况,缺失项可一键安装。</summary>
+    private async void DepBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender) is not { } row) return;
+
+        var name = string.IsNullOrWhiteSpace(row.Device.DisplayName)
+            ? row.Device.Host
+            : row.Device.DisplayName;
+
+        var host = new StackPanel { Spacing = 10 };
+        var tip = new TextBlock { Text = "正在检测…", FontSize = 13, Opacity = 0.8 };
+        host.Children.Add(tip);
+
+        var dialog = new ContentDialog
+        {
+            Title = $"环境自检 · {name}",
+            Content = new ScrollViewer { Content = host, MaxHeight = 520 },
+            CloseButtonText = "关闭",
+            XamlRoot = XamlRoot,
+        };
+
+        // 先弹窗再填充:探测与安装都要等 SSH,不能让用户对着空白发呆
+        _ = dialog.ShowAsync();
+        host.Children.Add(await BuildDependencyPanelAsync(row.Device));
+        tip.Visibility = Visibility.Collapsed;
+    }
+
     private void EditBtn_Click(object sender, RoutedEventArgs e)
     {
         if (RowOf(sender) is not { } row) return;
@@ -304,6 +331,9 @@ public sealed partial class DevicesPage : Page
             }
 
             ShowTestResult(report);
+
+            // 连接成功后顺带自检 NAS 端依赖;缺什么就地列出,由用户决定是否安装
+            if (report.Ok) await ShowDependencyOfferAsync(device);
         }
         catch (Exception ex)
         {
@@ -393,6 +423,170 @@ public sealed partial class DevicesPage : Page
         TestResultBar.Content = panel;
         TestResultBar.IsOpen = true;
     }
+
+    /// <summary>
+    /// 连接成功后的依赖自检:齐全只给一句确认;缺失就列出「缺什么 / 影响什么」,
+    /// 并提供一键安装。安装会改动 NAS 系统,必须由用户点按钮触发,不做无人值守。
+    /// </summary>
+    private async Task ShowDependencyOfferAsync(NasDevice device)
+    {
+        AppendTestContent(await BuildDependencyPanelAsync(device));
+    }
+
+    /// <summary>构建依赖自检面板:测试连接的结果条与设备行弹窗共用同一份逻辑。</summary>
+    private async Task<UIElement> BuildDependencyPanelAsync(NasDevice device)
+    {
+        DependencyReport report;
+        try
+        {
+            report = await DependencyService.ProbeAsync(device);
+        }
+        catch (Exception ex)
+        {
+            return PlainText("依赖自检未执行:" + ex.Message);
+        }
+
+        if (!report.Ok)
+        {
+            return PlainText("依赖自检失败:" + (report.Error ?? "未知原因"));
+        }
+
+        var missing = report.Missing;
+        if (missing.Count == 0)
+        {
+            return PlainText("NAS 端依赖齐全,全部功能可用。");
+        }
+
+        var panel = new StackPanel { Spacing = 6 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"缺少 {missing.Count} 个组件" +
+                   (report.Distro.Length > 0 ? $"(系统:{report.Distro})" : "") + ":",
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+        });
+
+        foreach (var m in missing)
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = $"· {m.Label} —— {m.Why}",
+                FontSize = 12,
+                Opacity = 0.8,
+                TextWrapping = TextWrapping.Wrap,
+            });
+        }
+
+        var installable = report.Installable;
+        var canElevate = device.UseSudo || device.RootLogin || report.IsRoot;
+
+        if (report.Manager == PkgManager.None || installable.Count == 0)
+        {
+            panel.Children.Add(PlainText(DependencyService.ManualHint(missing)));
+        }
+        else if (!canElevate)
+        {
+            panel.Children.Add(PlainText(
+                "当前权限模式无法自动安装,请在「权限模式」里勾选 sudo 提权或 root 登录后重新测试。"));
+        }
+        else
+        {
+            var btn = new Button
+            {
+                Content = $"安装 {installable.Count} 个缺失组件",
+                FontSize = 12,
+                HorizontalAlignment = HorizontalAlignment.Left,
+            };
+            var ring = new ProgressRing
+            {
+                Width = 16,
+                Height = 16,
+                Visibility = Visibility.Collapsed,
+                HorizontalAlignment = HorizontalAlignment.Left,
+            };
+            var output = new TextBlock
+            {
+                FontSize = 12,
+                IsTextSelectionEnabled = true,
+                TextWrapping = TextWrapping.Wrap,
+                FontFamily = new FontFamily("Cascadia Mono,Consolas"),
+            };
+            var scroller = new ScrollViewer
+            {
+                MaxHeight = 220,
+                Content = output,
+                Visibility = Visibility.Collapsed,
+            };
+
+            btn.Click += async (_, _) =>
+            {
+                btn.IsEnabled = false;
+                ring.Visibility = Visibility.Visible;
+                ring.IsActive = true;
+                scroller.Visibility = Visibility.Visible;
+                output.Text = "正在安装,请稍候(首次 apt update 可能持续数分钟)…";
+                try
+                {
+                    var keys = installable.Select(i => i.Key).ToList();
+                    var r = await DependencyService.InstallAsync(device, report.Manager, keys);
+
+                    var text = (r.Stdout ?? "") + (r.Stderr ?? "");
+                    if (r.TimedOut)
+                        text = $"安装超时({DependencyService.InstallTimeoutMs / 60000} 分钟)," +
+                               "请到 NAS 上确认是否已部分安装。";
+                    if (r.ErrorMessage is not null) text = r.ErrorMessage;
+                    if (text.Trim().Length == 0) text = "命令已执行,无输出。";
+
+                    var again = await DependencyService.ProbeAsync(device);
+                    var tail = again.Ok
+                        ? again.Missing.Count == 0
+                            ? "\n\n安装完成,依赖已齐全。"
+                            : "\n\n仍有缺失:" + string.Join("、", again.Missing.Select(m => m.Label))
+                        : "";
+                    var post = DependencyService.PostInstallHint(keys);
+                    output.Text = text + tail + (post.Length > 0 ? "\n\n提示:" + post : "");
+                }
+                catch (Exception ex)
+                {
+                    output.Text = "安装出错:" + ex.Message;
+                }
+                finally
+                {
+                    ring.IsActive = false;
+                    ring.Visibility = Visibility.Collapsed;
+                }
+            };
+
+            panel.Children.Add(btn);
+            panel.Children.Add(ring);
+            panel.Children.Add(scroller);
+        }
+
+        return panel;
+    }
+
+    /// <summary>把内容追加到测试结果条里(与指纹提示并存)。</summary>
+    private void AppendTestContent(UIElement extra)
+    {
+        if (TestResultBar.Content is StackPanel existing && existing.Tag as string == "depwrap")
+        {
+            existing.Children.Add(extra);
+            return;
+        }
+
+        var wrap = new StackPanel { Spacing = 8, Tag = "depwrap" };
+        if (TestResultBar.Content is UIElement old) wrap.Children.Add(old);
+        wrap.Children.Add(extra);
+        TestResultBar.Content = wrap;
+    }
+
+    private static TextBlock PlainText(string text) => new()
+    {
+        Text = text,
+        FontSize = 12,
+        Opacity = 0.8,
+        TextWrapping = TextWrapping.Wrap,
+    };
 
     private void BrowseKeyBtn_Click(object sender, RoutedEventArgs e)
     {

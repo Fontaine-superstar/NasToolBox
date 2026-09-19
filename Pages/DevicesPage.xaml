@@ -103,6 +103,8 @@
 
                             <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6" Margin="20,10,0,0">
                                 <Button Content="编辑" Click="EditBtn_Click" FontSize="12" Padding="10,4" />
+                                <Button Content="环境自检" Click="DepBtn_Click" FontSize="12" Padding="10,4"
+                                        ToolTipService.ToolTip="检查 NAS 上是否装齐 NasToolbox 用到的组件,缺失可一键安装" />
                                 <Button Content="删除" Click="DeleteBtn_Click" FontSize="12" Padding="10,4" />
                             </StackPanel>
                         </Grid>
