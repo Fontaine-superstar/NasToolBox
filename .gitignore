@@ -30,6 +30,6 @@ ehthumbs.db
 Desktop.ini
 .DS_Store
 
-# ===== 版本 =====
-Version/
-publish/
+# ===== 版本 / 发布输出 =====
+[Vv]ersion/
+[Pp]ublish/
