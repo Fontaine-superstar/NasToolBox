@@ -1,6 +1,8 @@
 # ===== 构建产物 =====
 [Bb]in/
 [Oo]bj/
+# dotnet publish 输出(含自包含运行时与离线镜像,数百 MB)
+[Pp]ublish/
 *.xbf
 *.user
 *.suo
