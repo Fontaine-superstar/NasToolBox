@@ -21,12 +21,32 @@ public sealed partial class SplashWindow : Window
     private const int WidthPx = 560;
     private const int HeightPx = 340;
 
-    // DWMWINDOWATTRIBUTE(dwmapi.h):33 = 窗口圆角策略,34 = 边框颜色
+    // DWMWINDOWATTRIBUTE(dwmapi.h):2 = 非客户区渲染策略,33 = 窗口圆角策略,34 = 边框颜色
+    private const int DwmwaNcRenderingPolicy = 2;
     private const int DwmwaWindowCornerPreference = 33;
     private const int DwmwaBorderColor = 34;
 
+    // DWMNCRENDERING_POLICY:2 = 禁用非客户区渲染(彻底的"无框",DWM 不再画那圈 1px 描边)
+    private const int DwmncrpDisabled = 2;
+
     // DWM_WINDOW_CORNER_PREFERENCE:1 = 不圆角(圆角处会露出窗口底色,视觉上就是"白角")
     private const int DwmwcpDoNotRound = 1;
+
+    // Win32 窗口样式(user32.h)
+    private const int GwlStyle = -16;
+    private const int WsCaption = 0x00C00000;   // = WS_BORDER | WS_DLGFRAME
+    private const int WsThickFrame = 0x00040000; // 可调整大小的边框
+    private const int WsMinimizeBox = 0x00020000;
+    private const int WsMaximizeBox = 0x00010000;
+
+    // SetWindowPos 标志
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoMove = 0x0002;
+    private const uint SwpNoZOrder = 0x0004;
+    private const uint SwpNoActivate = 0x0010;
+    private const uint SwpFrameChanged = 0x0020;
+
+    private Color _background;
 
     public SplashWindow()
     {
@@ -42,6 +62,10 @@ public sealed partial class SplashWindow : Window
         }
 
         ApplyWindowStyle();
+
+        // 首次激活时窗口已完全创建,再剥一次边框:
+        // WinUI 在 Show/Activate 之后可能重新应用窗口样式,只做一次会被覆盖回来
+        Activated += (_, _) => StripFrame();
     }
 
     /// <summary>更新进度(必须在 UI 线程调用;StartupService 在 await 后回到 UI 线程)。</summary>
@@ -54,10 +78,10 @@ public sealed partial class SplashWindow : Window
     private void ApplyWindowStyle()
     {
         // 背景色先落地:后面 DWM 边框要用同一个颜色,否则无边框窗口会留一圈系统默认的浅色描边
-        var background = ResolveBackground();
+        _background = ResolveBackground();
         try
         {
-            Root.Background = new SolidColorBrush(background);
+            Root.Background = new SolidColorBrush(_background);
         }
         catch
         {
@@ -77,10 +101,10 @@ public sealed partial class SplashWindow : Window
             presenter.SetBorderAndTitleBar(false, false);
             aw.SetPresenter(presenter);
 
+            StripFrame();
+
             aw.ResizeClient(new SizeInt32(WidthPx, HeightPx));
             Center(aw);
-
-            PaintBorderLikeContent(aw, background);
         }
         catch
         {
@@ -89,28 +113,45 @@ public sealed partial class SplashWindow : Window
     }
 
     /// <summary>
-    /// 消除无边框窗口的白色描边:Windows 11 上即使 SetBorderAndTitleBar(false, false),
-    /// 系统仍会画一圈 1px 边框且默认为浅色;同时圆角外会露出窗口底色。
-    /// 这里把边框色刷成与内容一致的颜色,并关闭圆角(Win10 不支持时静默忽略)。
+    /// 彻底消除无边框窗口四周的白色描边。
+    /// 关键点:Windows 11 上即使 SetBorderAndTitleBar(false, false),DWM 仍会画一圈 1px 浅色框架;
+    /// 而 DWMWA_BORDER_COLOR 只有在系统设置里开启了"标题栏和窗口边框显示强调色"时才生效,
+    /// 默认关闭 —— 所以只刷边框色是没用的。这里从 Win32 层下手:
+    /// ① 摘掉 WS_CAPTION / WS_THICKFRAME 等框架样式;② 禁用 DWM 非客户区渲染;③ 去圆角 + 边框色兜底。
+    /// 全部静默降级,失败只是"仍有边框",不影响启动。
     /// </summary>
-    private void PaintBorderLikeContent(AppWindow aw, Color background)
+    private void StripFrame()
     {
         try
         {
             var hwnd = WindowNative.GetWindowHandle(this);
             if (hwnd == IntPtr.Zero) return;
 
-            // 关圆角,避免四角露出浅色底
+            // ① 摘掉框架样式(WS_CAPTION 含 WS_BORDER 与 WS_DLGFRAME)
+            var style = GetWindowLongPtr(hwnd, GwlStyle).ToInt64();
+            var stripped = style & ~(WsCaption | WsThickFrame | WsMinimizeBox | WsMaximizeBox);
+            if (stripped != style)
+            {
+                SetWindowLongPtr(hwnd, GwlStyle, (IntPtr)stripped);
+                // 必须带 SWP_FRAMECHANGED,否则样式变更不会立即重算非客户区
+                SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0,
+                    SwpNoMove | SwpNoSize | SwpNoZOrder | SwpNoActivate | SwpFrameChanged);
+            }
+
+            // ② 禁用非客户区渲染 —— 这才是四边白边的根治办法
+            var disabled = DwmncrpDisabled;
+            DwmSetWindowAttribute(hwnd, DwmwaNcRenderingPolicy, ref disabled, sizeof(int));
+
+            // ③ 去圆角(圆角外会露出浅色底),边框色刷成内容色作为兜底(COLORREF 为 0x00BBGGRR)
             var corner = DwmwcpDoNotRound;
             DwmSetWindowAttribute(hwnd, DwmwaWindowCornerPreference, ref corner, sizeof(int));
 
-            // 边框色 = 内容背景色(COLORREF 为 0x00BBGGRR)
-            var colorref = background.B << 16 | background.G << 8 | background.R;
+            var colorref = _background.B << 16 | _background.G << 8 | _background.R;
             DwmSetWindowAttribute(hwnd, DwmwaBorderColor, ref colorref, sizeof(int));
         }
         catch
         {
-            // 不支持(如 Win10)或拿不到句柄:保留系统默认边框色
+            // 拿不到句柄或系统不支持:保留系统默认外观
         }
     }
 
@@ -164,4 +205,14 @@ public sealed partial class SplashWindow : Window
 
     [DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int valueSize);
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
+    private static extern IntPtr GetWindowLongPtr(IntPtr hwnd, int index);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
+    private static extern IntPtr SetWindowLongPtr(IntPtr hwnd, int index, IntPtr newLong);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter, int x, int y, int cx, int cy, uint flags);
 }
