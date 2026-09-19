@@ -30,7 +30,7 @@
                         x:Name="SearchBox"
                         Grid.Column="0"
                         Width="320"
-                        PlaceholderText="搜索设备 / 工具..."
+                        PlaceholderText="搜索 NAS 设备..."
                         QueryIcon="Find"
                         VerticalAlignment="Center"
                         TextChanged="SearchBox_TextChanged"
@@ -87,19 +87,9 @@
                         <SymbolIcon Symbol="Folder" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="磁盘与共享" Tag="disk">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE8B7;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
                 <NavigationViewItem Content="Docker" Tag="docker">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE7B8;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItem Content="工具库" Tag="tools">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE71D;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem Content="关于" Tag="about">

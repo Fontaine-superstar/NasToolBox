@@ -77,9 +77,11 @@
                         ToolTipService.ToolTip="下载选中的文件到本地文件夹" />
                 <Button x:Name="DeleteBtn" Content="删除" Click="DeleteBtn_Click" IsEnabled="False"
                         ToolTipService.ToolTip="删除选中的文件或文件夹(文件夹连带内部内容)" />
+                <Button x:Name="DriveBtn" Content="网络驱动器" Click="DriveBtn_Click"
+                        ToolTipService.ToolTip="管理已映射到此 NAS 的网络驱动器;也可直接右键文件夹快速映射" />
             </StackPanel>
             <TextBlock FontSize="11" Opacity="0.55" TextWrapping="Wrap"
-                       Text="支持拖拽:把本地文件拖进列表即上传到当前目录,把列表里的文件拖到资源管理器即下载。经 SMB(445 端口)访问,登录账号与密码复用该设备的 SSH 账号密码;若 SMB 是另一套账号,请在 Windows 凭据管理器里保存一份该 NAS 地址的 Windows 凭据。" />
+                       Text="支持拖拽:把本地文件拖进列表即上传到当前目录,把列表里的文件拖到资源管理器即下载。右键行可把共享或文件夹映射为本地网络驱动器,映射与断开都在「网络驱动器」里管理。经 SMB(445 端口)访问,登录账号与密码复用该设备的 SSH 账号密码;若 SMB 是另一套账号,请在 Windows 凭据管理器里保存一份该 NAS 地址的 Windows 凭据。" />
         </StackPanel>
 
         <!-- ===== 文件列表(支持拖拽:拖入上传 / 拖出下载) ===== -->
@@ -112,6 +114,7 @@
                           CanDragItems="True"
                           DoubleTapped="FileList_DoubleTapped"
                           SelectionChanged="FileList_SelectionChanged"
+                          RightTapped="FileList_RightTapped"
                           DragItemsStarting="FileList_DragItemsStarting">
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="models:FileEntry">

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -249,6 +250,7 @@ public sealed partial class FileManagerPage : Page
         DeleteBtn.IsEnabled = count > 0;
         UploadBtn.IsEnabled = inShare && Current is not null;
         NewFolderBtn?.IsEnabled = inShare;
+        RefreshDriveButton();
     }
 
     // ---------- 下载 / 上传 ----------
@@ -553,6 +555,255 @@ public sealed partial class FileManagerPage : Page
 
     private async void DeleteBtn_Click(object sender, RoutedEventArgs e) =>
         await DeleteAsync().ConfigureAwait(true);
+
+    // ---------- 右键菜单:网络驱动器映射 / 下载 / 删除 ----------
+
+    /// <summary>右键列表:过期目标是文件夹就映射它,否则退回到当前目录。多选时若命中某项就以该项为准。</summary>
+    private void FileList_RightTapped(object sender, RightTappedRoutedEventArgs e)
+    {
+        if (Current is null) return;
+
+        var entry = (e.OriginalSource as FrameworkElement)?.DataContext as FileEntry;
+        var menu = BuildContextMenu(entry);
+        menu.ShowAt((FrameworkElement)sender, e.GetPosition((UIElement)sender));
+    }
+
+    private MenuFlyout BuildContextMenu(FileEntry? entry)
+    {
+        var target = entry is { IsDirectory: true } ? entry.FullPath : (_path.Length > 0 ? _path : null);
+        var menu = new MenuFlyout();
+
+        if (target is not null)
+        {
+            if (DriveMapService.MappedLetter(target) is { } mapped)
+            {
+                menu.Items.Add(MenuItem($"在资源管理器中打开 {mapped}:", "\uE8B7",
+                    () => OpenInShell($@"{mapped}:\")));
+                menu.Items.Add(MenuItem($"断开 {mapped}: 驱动器映射", "\uE74D",
+                    () => _ = UnmapAsync(mapped)));
+            }
+            else
+            {
+                var suggest = DriveMapService.SuggestLetter();
+                menu.Items.Add(suggest == '\0'
+                    ? Disabled("没有空闲盘符可用于映射")
+                    : MenuItem($"映射为网络驱动器 ({suggest}:)", "\uE8B7",
+                        () => _ = MapDialogAsync(target)));
+            }
+
+            menu.Items.Add(MenuItem("复制网络路径", "\uE8C8", () => CopyText(target)));
+            menu.Items.Add(new MenuFlyoutSeparator());
+        }
+
+        var selected = SelectedEntries();
+        var canDownload = selected.Any(x => !x.IsDirectory);
+        menu.Items.Add(MenuItem("下载所选文件", "\uE896", () => _ = DownloadAsync(selected), canDownload));
+        menu.Items.Add(MenuItem("删除所选", "\uE74D", () => _ = DeleteAsync(),
+            _path.Length > 0 && selected.Count > 0));
+
+        return menu;
+    }
+
+    private static MenuFlyoutItem MenuItem(string text, string glyph, Action onClick, bool enabled = true)
+    {
+        var item = new MenuFlyoutItem
+        {
+            Text = text,
+            IsEnabled = enabled,
+            Icon = new FontIcon { Glyph = glyph, FontSize = 15 },
+        };
+        item.Click += (_, _) => onClick();
+        return item;
+    }
+
+    private static MenuFlyoutItem Disabled(string text) => new() { Text = text, IsEnabled = false };
+
+    /// <summary>盘符 + 是否持久 + 映射后是否打开:一次确认,避免"快速映射"变成盲操作。</summary>
+    private async Task MapDialogAsync(string unc)
+    {
+        if (Current is null) return;
+
+        var letters = DriveMapService.AvailableLetters();
+        if (letters.Count == 0)
+        {
+            StatusText.Text = "Z 到 D 之间已经没有空闲盘符了,请先断开一些网络驱动器或本地卷。";
+            return;
+        }
+
+        var combo = new ComboBox
+        {
+            Header = "驱动器盘符",
+            Width = 140,
+            ItemsSource = letters.Select(c => c + ":").ToList(),
+            SelectedIndex = 0,
+        };
+        var persist = new CheckBox { Content = "登录时自动重新连接", IsChecked = true };
+        var openAfter = new CheckBox { Content = "映射后在资源管理器中打开", IsChecked = true };
+        var note = new TextBlock
+        {
+            Text = unc + "\r\n凭据复用该设备的 SSH 账号密码(如果 SMB 是另一套账号,请先在 Windows 凭据管理器里保存该地址的 Windows 凭据)。",
+            FontSize = 12,
+            Opacity = 0.7,
+            TextWrapping = TextWrapping.Wrap,
+        };
+
+        var panel = new StackPanel { Spacing = 10, Width = 420 };
+        panel.Children.Add(note);
+        panel.Children.Add(combo);
+        panel.Children.Add(persist);
+        panel.Children.Add(openAfter);
+
+        var dialog = new ContentDialog
+        {
+            Title = "映射网络驱动器",
+            Content = panel,
+            PrimaryButtonText = "映射",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = XamlRoot,
+        };
+        if (await dialog.ShowAsync().AsTask().ConfigureAwait(true) != ContentDialogResult.Primary) return;
+
+        var letter = letters[Math.Max(0, combo.SelectedIndex)];
+        BusyRing.Visibility = Visibility.Visible;
+        try
+        {
+            StatusText.Text = $"正在映射 {unc} → {letter}: …";
+            await DriveMapService.MapAsync(Current, unc, letter, persist.IsChecked == true)
+                .ConfigureAwait(true);
+            StatusText.Text = $"已映射 {unc} → {letter}:";
+            RefreshDriveButton();
+            if (openAfter.IsChecked == true) OpenInShell($@"{letter}:\");
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "映射失败:" + ReadFriendly(ex);
+        }
+        finally
+        {
+            BusyRing.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private async Task UnmapAsync(char letter)
+    {
+        BusyRing.Visibility = Visibility.Visible;
+        try
+        {
+            await DriveMapService.DisconnectAsync(letter).ConfigureAwait(true);
+            StatusText.Text = $"已断开 {letter}: 的网络驱动器映射";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "断开失败:" + ReadFriendly(ex);
+        }
+        finally
+        {
+            BusyRing.Visibility = Visibility.Collapsed;
+            RefreshDriveButton();
+        }
+    }
+
+    /// <summary>「网络驱动器」按钮:集中查看与断开这台 NAS 的映射。</summary>
+    private async void DriveBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (Current is null) return;
+
+        var mapped = DriveMapService.ListMapped(Current.Host);
+        var panel = new StackPanel { Spacing = 10, Width = 520 };
+
+        // 断开按钮的回调要关掉弹窗,dialog 必须先声明再赋值(C# 不允许先用后声明)
+        ContentDialog dialog = null!;
+
+        if (mapped.Count == 0)
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = $"当前没有映射到 {Current.Host} 的网络驱动器。\r\n" +
+                       "在左侧列表里右键某个共享(或任意文件夹),选「映射为网络驱动器」即可。",
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = 13,
+                Opacity = 0.75,
+            });
+        }
+        else
+        {
+            foreach (var drive in mapped)
+            {
+                var row = new Grid { ColumnSpacing = 10 };
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                var text = new TextBlock
+                {
+                    Text = $"{drive.Letter}:  →  {drive.Remote}",
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    FontSize = 13,
+                };
+                var btn = new Button
+                {
+                    Content = "断开",
+                    FontSize = 12,
+                    Padding = new Thickness(10, 4, 10, 4),
+                    Tag = drive.Letter,
+                };
+                Grid.SetColumn(btn, 1);
+                btn.Click += async (s, _) =>
+                {
+                    await UnmapAsync((char)((Button)s!).Tag).ConfigureAwait(true);
+                    dialog.Hide();
+                };
+
+                row.Children.Add(text);
+                row.Children.Add(btn);
+                panel.Children.Add(row);
+            }
+        }
+
+        dialog = new ContentDialog
+        {
+            Title = "网络驱动器",
+            Content = panel,
+            PrimaryButtonText = _path.Length > 0 ? "映射当前目录" : null,
+            CloseButtonText = "关闭",
+            XamlRoot = XamlRoot,
+        };
+
+        if (await dialog.ShowAsync().AsTask().ConfigureAwait(true) == ContentDialogResult.Primary)
+            await MapDialogAsync(_path).ConfigureAwait(true);
+    }
+
+    /// <summary>按钮上显示这台 NAS 已占用的盘符,便于确认映射是否还在。</summary>
+    private void RefreshDriveButton()
+    {
+        if (Current is null) return;
+        var mapped = DriveMapService.ListMapped(Current.Host);
+        DriveBtn.Content = mapped.Count == 0
+            ? "网络驱动器"
+            : $"网络驱动器 ({string.Join(' ', mapped.Select(m => m.Letter + ":"))})";
+    }
+
+    private void OpenInShell(string target)
+    {
+        try { Process.Start(new ProcessStartInfo { FileName = target, UseShellExecute = true }); }
+        catch (Exception ex) { StatusText.Text = "打开失败:" + ex.Message; }
+    }
+
+    private void CopyText(string text)
+    {
+        try
+        {
+            var package = new DataPackage();
+            package.SetText(text);
+            Clipboard.SetContent(package);
+            StatusText.Text = "已复制:" + text;
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "复制失败:" + ex.Message;
+        }
+    }
 
     // ---------- 本地文件 / 文件夹选择(非打包应用必须先给窗口句柄) ----------
 

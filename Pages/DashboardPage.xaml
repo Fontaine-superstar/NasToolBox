@@ -104,7 +104,7 @@
                 IsOpen="True"
                 Severity="Informational"
                 Title="提示"
-                Message="Ping / 端口 / DNS 诊断见「网络诊断」;SMB 共享浏览与本机磁盘空间见「磁盘与共享」;第三方绿色工具放入 Tools\ 分类目录后出现在「工具库」。" />
+                Message="Ping / 端口 / DNS 诊断见「网络诊断」;SMB 浏览与文件传输见「文件管理」(右键可把共享映射为网络驱动器)。" />
 
         </StackPanel>
     </ScrollViewer>

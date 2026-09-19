@@ -118,7 +118,7 @@ public static class SmbSession
             if (lastRc == 1326)
                 throw new InvalidOperationException(
                     $"SMB 登录失败:账号或密码不正确({host})。\r\n" +
-                    "文件管理复用该设备的 SSH 账号密码;若 NAS 上 SMB 与 SSH 是两套账号,请在 Windows 凭据管理器保存该地址的 Windows 凭据,或到「磁盘与共享」用资源管理器登录一次。");
+                    "文件管理复用该设备的 SSH 账号密码;若 NAS 上 SMB 与 SSH 是两套账号,请在 Windows 凭据管理器保存该地址的 Windows 凭据(开始菜单搜「凭据管理器」→ Windows 凭据 → 添加 Windows 凭据)。");
             if (lastRc == 1219)
                 return;
             if (lastRc == ErrorNoNetworkOrBadPath)

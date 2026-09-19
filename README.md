@@ -11,16 +11,14 @@
 | 首页 | 本机摘要(主机名 / IPv4 / 网关 / CPU / 内存 / 开机时长,WMI 后台查询),NAS 设备在线速览 + 一键检测 |
 | 设备管理 | NAS 台账(名称 / IP / MAC / Web / SSH 账号),增删改 + 一键 Ping、打开 Web 管理、WOL 唤醒、打开 SMB 共享;**SSH 管理**:内置 SSH 终端、SSH 状态一键体检、自定义命令执行 |
 | NAS 状态 | 远程采集目标 NAS 的运行快照:系统 / 运行(在线时长、负载)/ 内存 / 硬盘(容量、类型、接口、型号、SMART 健康,点击单盘查看完整 SMART 详情)/ 网络(内网 IP、公网 IP、网关、DNS、网卡)/ 磁盘空间(挂载点用量) |
-| 文件管理 | 经 SMB 浏览共享与目录,支持上传、下载、新建文件夹、删除;文件可从资源管理器**拖入即上传**、从列表**拖出即下载** |
+| 文件管理 | 经 SMB 浏览共享与目录,支持上传、下载、新建文件夹、删除;文件可从资源管理器**拖入即上传**、从列表**拖出即下载**;右键共享或文件夹可**映射为本地网络驱动器**(也可一键断开) |
 | Docker | 远程管理 NAS 上的容器(查看 / 启动 / 停止 / 重启 / 日志等) |
 | 网络诊断 | Ping 报告(丢包率 / 最短 / 最长 / 平均延迟)、NAS 外网连通性测试(命令在 NAS 上执行)、常用 NAS 端口探测(SSH 22 / SMB 445 / 群晖 5000 等)、DNS 解析 |
-| 磁盘与共享 | 本机磁盘空间进度条列表;NetShareEnum 枚举远程 SMB 共享,单击在资源管理器打开 |
 | Web 管理 | 左侧选择 NAS 设备,应用内(WebView2)直接打开其 Web 管理界面,支持后退 / 前进 / 刷新 |
 | SSH 终端(Shell) | 基于 xterm.js + WebView2 的交互式终端,内嵌于应用内 |
-| 工具库 | 扫描 `Tools/` 下的绿色工具(WinSCP、PuTTY…),图标自动提取缓存,`Metadata/tools.json` 提供中文名与描述 |
 | 关于 | 功能说明 / 数据存放位置 / 使用须知 |
 
-顶栏搜索框为统一搜索:同时匹配 NAS 设备与工具库,前缀「设备 · / 工具 ·」区分,回车直达对应页面。
+顶栏搜索框:按名称 / 地址 / 主机名 / 备注匹配 NAS 设备,回车直达「设备管理」并自动过滤。
 
 ## 环境要求
 
@@ -54,16 +52,14 @@ dotnet run            # 非打包(Unpackaged)模式直接运行
 │   └── NasDeviceStore / DeviceStatusStore / SecretProtector …
 ├── Converters/Conv.cs        x:Bind 函数绑定辅助(字节格式化 / 端口状态 / 盘符等)
 ├── Assets/Terminal/          xterm.js 前端终端(vendored,MIT)
-├── Metadata/tools.json       工具元数据(match = 路径子串)
-├── Tools/<分类名>/…          第三方绿色工具(需自备,仓库内为空)
 └── docs/                     开发者指南 / 用户手册 / AI 上下文档
 ```
 
 ## 数据存放
 
 - 设备台账:`%LocalAppData%\NasToolbox\devices.json`(首次保存设备时创建)
-- 设备状态缓存:`%LocalAppData%\NasToolbox\`
-- 工具图标缓存:`%LocalAppData%\NasToolbox\IconCache\`
+- 设备状态缓存:`%LocalAppData%\NasToolbox\device_status.json`
+- SSH 主机指纹:`%LocalAppData%\NasToolbox\known_hosts.json`
 
 ## 隐私与安全
 

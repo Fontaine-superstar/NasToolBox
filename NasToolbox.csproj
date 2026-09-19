@@ -2,7 +2,7 @@
 
   <!--
     NAS 工具箱 - WinUI 3 (.NET 10)
-    设备管理 / 网络诊断 / SMB 共享 / 磁盘空间 / Wake-on-LAN / 绿色工具库
+    设备管理 / 网络诊断 / SMB 共享 / 硬盘 SMART / Docker / SSH 终端 / Wake-on-LAN
   -->
 
   <PropertyGroup>
@@ -38,15 +38,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- 图标提取用到 System.Drawing 的完整能力 -->
+    <!-- 文件选择对话框(System.Windows.Forms.OpenFileDialog):选 SSH 私钥 / 导入镜像 tar -->
     <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
   </ItemGroup>
 
-  <!-- Tools/(第三方工具,按中文分类文件夹组织)与 Metadata/ 随构建输出;img\ 为随附的建议镜像 tar;
+  <!-- img\ 为随附的建议镜像 tar;
        Assets\Terminal\ 为内嵌终端的 xterm.js 离线资源(终端页 WebView2 经虚拟主机加载) -->
   <ItemGroup>
-    <Content Include="Tools\**\*" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
-    <Content Include="Metadata\**\*" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="img\**\*" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <Content Include="Assets\Terminal\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

@@ -8,7 +8,6 @@ namespace NasToolbox;
 public sealed partial class MainWindow : Window
 {
     private const string DevPrefix = "设备 · ";
-    private const string ToolPrefix = "工具 · ";
 
     /// <summary>主窗口单例:供页面同步侧栏选中状态(如跳转到 Docker 管理)。</summary>
     public static MainWindow? Instance { get; private set; }
@@ -62,9 +61,7 @@ public sealed partial class MainWindow : Window
             "shell" => typeof(ShellPage),
             "network" => typeof(NetworkToolsPage),
             "files" => typeof(FileManagerPage),
-            "disk" => typeof(DiskSharePage),
             "docker" => typeof(DockerPage),
-            "tools" => typeof(AllToolsPage),
             "about" => typeof(AboutPage),
             _ => null
         };
@@ -74,7 +71,7 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    /// <summary>顶栏统一搜索:NAS 设备 + 工具库,前缀区分类型。</summary>
+    /// <summary>顶栏搜索:按名称 / 地址 / 主机名 / 备注匹配 NAS 设备。</summary>
     private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
     {
         if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput) return;
@@ -87,16 +84,9 @@ public sealed partial class MainWindow : Window
                         || d.Hostname.Contains(q, StringComparison.OrdinalIgnoreCase)
                         || d.Note.Contains(q, StringComparison.OrdinalIgnoreCase))
             .Select(d => DevPrefix + d.DisplayName)
-            .Take(4);
+            .Take(8);
 
-        var tools = ToolCatalog.Tools
-            .Where(t => t.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
-                        || t.Category.Contains(q, StringComparison.OrdinalIgnoreCase)
-                        || (t.Description?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false))
-            .Select(t => ToolPrefix + t.Name)
-            .Take(6);
-
-        sender.ItemsSource = devices.Concat(tools).ToList();
+        sender.ItemsSource = devices.ToList();
     }
 
     private void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
@@ -104,15 +94,11 @@ public sealed partial class MainWindow : Window
         var text = (args.ChosenSuggestion as string) ?? args.QueryText;
         if (string.IsNullOrWhiteSpace(text)) return;
 
-        var isDevice = text.StartsWith(DevPrefix, StringComparison.Ordinal);
-        var query = isDevice ? text[DevPrefix.Length..]
-                  : text.StartsWith(ToolPrefix, StringComparison.Ordinal) ? text[ToolPrefix.Length..]
-                  : text;
+        var query = text.StartsWith(DevPrefix, StringComparison.Ordinal) ? text[DevPrefix.Length..] : text;
 
-        var tag = isDevice ? "devices" : "tools";
         NavView.SelectedItem = NavView.MenuItems
             .OfType<NavigationViewItem>()
-            .First(i => (string?)i.Tag == tag);
-        NavFrame.Navigate(isDevice ? typeof(DevicesPage) : typeof(AllToolsPage), query);
+            .First(i => (string?)i.Tag == "devices");
+        NavFrame.Navigate(typeof(DevicesPage), query);
     }
 }
