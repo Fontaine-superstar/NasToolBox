@@ -107,6 +107,15 @@ public static class DriveMapService
             break;
         }
 
+        // 1219:同一台主机上已有一组「别的凭据」建立的连接(此前会把 1219 误当成功,盘符其实没建)。
+        // 带凭据的映射在此状态下必然失败 —— 退回不带凭据裸连一次,复用主机上已保存/已连接的凭据;
+        // 实测裸连能成功建起盘符(net use 状态 OK),且随会话持久,与创建进程无关。
+        if (last == ErrorSessionCredentialConflict)
+        {
+            var bare = WNetAddConnection2(resource, null, null, flags);
+            if (bare == 0) return;
+        }
+
         throw new InvalidOperationException(Explain(last, target));
     }
 
