@@ -32,6 +32,9 @@ public sealed partial class SplashWindow : Window
     // DWM_WINDOW_CORNER_PREFERENCE:1 = 不圆角(圆角处会露出窗口底色,视觉上就是"白角")
     private const int DwmwcpDoNotRound = 1;
 
+    // DWMWA_BORDER_COLOR 的特殊值:0xFFFFFFFE = DWMWA_COLOR_NONE,完全不绘制边框
+    private const int DwmBorderColorNone = unchecked((int)0xFFFFFFFE);
+
     // Win32 窗口样式(user32.h)
     private const int GwlStyle = -16;
     private const int WsCaption = 0x00C00000;   // = WS_BORDER | WS_DLGFRAME
@@ -48,6 +51,18 @@ public sealed partial class SplashWindow : Window
 
     // 窗口类背景画刷(把客户区未被 XAML 覆盖的那 1px 也刷成内容色)
     private const int GclpHbrBackground = -10;
+
+    // 窗口过程子类化:GWLP_WNDPROC = -4;WM_NCCALCSIZE = 0x0083
+    private const int GwlpWndProc = -4;
+    private const uint WmNcCalcSize = 0x0083;
+
+    // WndProc 回调委托必须保存在字段里,防止被 GC 回收后窗口过程变成野指针
+    private WndProcDelegate? _procDelegate;
+    private IntPtr _procDelegatePtr;
+    private IntPtr _originalProc;
+    private bool _procInstalled;
+
+    private delegate IntPtr WndProcDelegate(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam);
 
     private Color _background;
 
@@ -137,33 +152,48 @@ public sealed partial class SplashWindow : Window
             var hwnd = WindowNative.GetWindowHandle(this);
             if (hwnd == IntPtr.Zero) return;
 
-            // ① 摘掉框架样式(WS_CAPTION 含 WS_BORDER 与 WS_DLGFRAME)
-            var style = GetWindowLongPtr(hwnd, GwlStyle).ToInt64();
-            var stripped = style & ~(WsCaption | WsThickFrame | WsMinimizeBox | WsMaximizeBox);
-            if (stripped != style)
-            {
-                SetWindowLongPtr(hwnd, GwlStyle, (IntPtr)stripped);
-                // 必须带 SWP_FRAMECHANGED,否则样式变更不会立即重算非客户区
-                SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0,
-                    SwpNoMove | SwpNoSize | SwpNoZOrder | SwpNoActivate | SwpFrameChanged);
-            }
+        // ① 摘掉框架样式(WS_CAPTION 含 WS_BORDER 与 WS_DLGFRAME)
+        var style = GetWindowLongPtr(hwnd, GwlStyle).ToInt64();
+        var stripped = style & ~(WsCaption | WsThickFrame | WsMinimizeBox | WsMaximizeBox);
+        if (stripped != style)
+        {
+            SetWindowLongPtr(hwnd, GwlStyle, (IntPtr)stripped);
+            // 必须带 SWP_FRAMECHANGED,否则样式变更不会立即重算非客户区
+            SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0,
+                SwpNoMove | SwpNoSize | SwpNoZOrder | SwpNoActivate | SwpFrameChanged);
+        }
+
+        // ①½ 子类化窗口过程,拦截 WM_NCCALCSIZE:wParam=TRUE 时返回 0,让客户区吃掉整个窗口矩形。
+        //    Win11 对剥掉 WS_CAPTION 的窗口仍会按默认 NCCALCSIZE 在窗口顶部保留 2~3px 标题栏色带
+        //    (实测 RGB 239,241,247),DWMWA_BORDER_COLOR / COLOR_NONE / NCRENDERING_POLICY /
+        //    SetWindowRgn 对它统统无效 —— 只有这一招是根治(WinUIEx 同款做法)。
+        if (!_procInstalled)
+        {
+            _procDelegate = WndProc;
+            _procDelegatePtr = Marshal.GetFunctionPointerForDelegate(_procDelegate);
+            _originalProc = SetWindowLongPtr(hwnd, GwlpWndProc, _procDelegatePtr);
+            if (_originalProc != IntPtr.Zero) _procInstalled = true;
+        }
 
             // ② 禁用非客户区渲染 —— 这才是四边白边的根治办法
             var disabled = DwmncrpDisabled;
             DwmSetWindowAttribute(hwnd, DwmwaNcRenderingPolicy, ref disabled, sizeof(int));
 
-            // ③ 去圆角(圆角外会露出浅色底),边框色刷成内容色作为兜底(COLORREF 为 0x00BBGGRR)
+            // ③ 去圆角(圆角外会露出浅色底)。
+            // ④ 边框:DWMWA_BORDER_COLOR = DWMWA_COLOR_NONE(0xFFFFFFFE) 让 DWM 完全不画边框。
+            //    Win11 上剥掉 WS_CAPTION 后 DWM 仍会在窗口顶部画 2px 浅色线(实测 RGB 238,240,246),
+            //    刷成内容色不生效,只有 NONE 才能彻底去掉 —— 这是无边框窗口白条的真正根源。
             var corner = DwmwcpDoNotRound;
             DwmSetWindowAttribute(hwnd, DwmwaWindowCornerPreference, ref corner, sizeof(int));
 
-            var colorref = ColorRefOf(_background);
-            DwmSetWindowAttribute(hwnd, DwmwaBorderColor, ref colorref, sizeof(int));
+            var none = DwmBorderColorNone;
+            DwmSetWindowAttribute(hwnd, DwmwaBorderColor, ref none, sizeof(int));
 
             // ④ 窗口底色:WinUI 的 XAML 岛常常没有铺满客户区最外一圈(尤其顶部 1px),
             //    那里露出的是窗口类背景(默认白色)。把它也刷成内容色,视觉上就消失了。
             if (!_classBrushSet)
             {
-                var brush = CreateSolidBrush(colorref);
+                var brush = CreateSolidBrush(ColorRefOf(_background));
                 if (brush != IntPtr.Zero)
                 {
                     _oldClassBrush = GetClassLongPtr(hwnd, GclpHbrBackground);
@@ -204,6 +234,13 @@ public sealed partial class SplashWindow : Window
             DeleteObject(_classBrush);
             _classBrush = IntPtr.Zero;
         }
+    }
+
+    /// <summary>窗口过程:仅拦截 WM_NCCALCSIZE 去掉非客户区保留带,其余全部转回原窗口过程。</summary>
+    private IntPtr WndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
+    {
+        if (msg == WmNcCalcSize && wParam != IntPtr.Zero) return IntPtr.Zero;
+        return CallWindowProc(_originalProc, hwnd, msg, wParam, lParam);
     }
 
     /// <summary>转成 COLORREF(0x00BBGGRR,注意字节序与 RGB 相反)。</summary>
@@ -277,8 +314,31 @@ public sealed partial class SplashWindow : Window
     private static extern IntPtr SetClassLongPtr(IntPtr hwnd, int index, IntPtr newLong);
 
     [DllImport("user32.dll")]
+    private static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool InvalidateRect(IntPtr hwnd, IntPtr rect, bool erase);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowRect(IntPtr hwnd, ref RECT rect);
+
+    [DllImport("gdi32.dll")]
+    private static extern IntPtr CreateRectRgn(int left, int top, int right, int bottom);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowRgn(IntPtr hwnd, IntPtr rgn, bool redraw);
 
     [DllImport("gdi32.dll")]
     private static extern IntPtr CreateSolidBrush(int colorref);
