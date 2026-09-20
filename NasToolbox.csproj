@@ -22,7 +22,9 @@
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
+    <!-- 自包含发布:把 .NET 运行时一起带上,目标机无需预装 .NET(此前默认依赖框架,换机就跑不起来) -->
+    <SelfContained>true</SelfContained>
     <!-- 永不裁剪:WinUI3 反射依赖多,Trim 不安全 -->
     <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>

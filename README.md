@@ -4,7 +4,7 @@
 
 **面向家用 NAS 的 Windows 桌面管理工具** -- 基于 WinUI 3 / .NET 10 全新打造,非打包(Unpackaged)形态,解压即用
 
-![License](https://img.shields.io/badge/License-GPLv3-blue.svg) ![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet) ![WinUI](https://img.shields.io/badge/WinUI-3-0078D4) ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B-0078D4?logo=windows) ![Version](https://img.shields.io/badge/Version-1.0.2-orange) ![Stars](https://img.shields.io/github/stars/Fontaine-superstar/NasToolBox?color=ffcb47&style=flat)
+![License](https://img.shields.io/badge/License-GPLv3-blue.svg) ![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet) ![WinUI](https://img.shields.io/badge/WinUI-3-0078D4) ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B-0078D4?logo=windows) ![Version](https://img.shields.io/badge/Version-1.0.3-orange) ![Stars](https://img.shields.io/github/stars/Fontaine-superstar/NasToolBox?color=ffcb47&style=flat)
 
 [快速开始](#快速开始) · [功能总览](#功能总览) · [NAS 端依赖](#nas-端依赖) · [使用须知](#使用须知) · [问题反馈](https://github.com/Fontaine-superstar/NasToolBox/issues)
 
