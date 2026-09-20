@@ -9,7 +9,7 @@
 [快速开始](#快速开始) · [功能总览](#功能总览) · [NAS 端依赖](#nas-端依赖) · [使用须知](#使用须知) · [问题反馈](https://github.com/Fontaine-superstar/NasToolBox/issues)
 
 > [!NOTE]
-> NAS 状态、Docker、文件管理、终端等远程能力都走 SSH —— 请先在 NAS 上开启 SSH 服务,并在「设备管理」中添加设备、填好账号密码。
+> 本工具的操作功能都基于SSH来实现，请确保NAS端安装并开启了SSH功能
 
 * * *
 
@@ -25,43 +25,27 @@
 - 隐私与安全
 - 使用须知
 - 许可证
-- 
 
 * * *
 
-## 功能亮点
+## 功能概览
 
-**设备台账** 一台 NAS 一张卡:名称 / IP / MAC / Web 端口 / SSH 账号;一键 Ping、打开 Web 后台、WOL 唤醒、打开 SMB 共享
+**设备管理** 快速切换需要管理的NAS，有编辑配置、环境自检、删除设备的功能，建议在权限与高级中选择root会话登录，避免部分功能不可用。支持维护多台 NAS，快速切换要管控的目标 NAS
 
-**实时状态快照** 一次 SSH 往返批量采集系统 / 运行 / 内存 / 硬盘 / 网络 / 磁盘空间;点单块硬盘可看完整 SMART 详情
+**NAS状态** 可显示NAS系统信息，运行状态，内存使用，硬盘信息，网络信息，存储空间信息
 
-**SMB 文件管理** 浏览共享与目录、上传下载、新建与删除;本地文件拖进列表即上传,列表文件拖到资源管理器即下载;右键可把共享映射为本地网络驱动器
+**Web管理** 快速打开NAS的Web界面，须在 设备管理-添加设备/编辑设备 中填写Web端口
 
-**Docker 远程管理** 查看 / 启动 / 停止 / 重启 / 删除容器、查看日志、镜像与 compose 项目列表,命令全部经 SSH 下发,不占用 NAS 端口
+**终端**    内嵌交互式 SSH 命令行终端
 
-**内嵌 SSH 终端** 基于 xterm.js + WebView2 的交互式终端,支持 sudo 提权与 root 登录通道
+**网络诊断** 包含 Ping 连通检测、NAS 网络连通测试，本地网络测速，排查网络故障
 
-**网络诊断** Ping 报告(丢包率 / 最短 / 最长 / 平均延迟)、NAS 外网连通性测试(命令在 NAS 上执行)、常用 NAS 端口探测、DNS 解析、内网测速
+**文件管理** 基于SMB的文件管理，可以快速查看文件，也可右键快速映射为网络驱动器
 
-**应用内 Web 管理** WebView2 直接打开 NAS 后台,支持后退 / 前进 / 刷新,不用再切浏览器
-
-**环境自检与一键安装** 首次连接自动探测 NAS 端依赖(`smartctl` / `lsblk` / `dmidecode` …),缺什么列什么,有提权时可一键补装
-
+**Docker** 完整的Docker管理功能，包含概览、容器、compose、镜像、docker网络。支持导入本地镜像，将本地镜像放置到/img文件夹可以安装本地镜像
 * * *
 
-## 功能总览
 
-| 页面 | 功能 |
-|---|---|
-| 首页 | 本机摘要(主机名 / IPv4 / 网关 / CPU / 内存 / 开机时长,WMI 后台查询),NAS 设备在线速览 + 一键检测 |
-| 设备管理 | NAS 台账(名称 / IP / MAC / Web / SSH 账号),增删改 + 一键 Ping、打开 Web 管理、WOL 唤醒、打开 SMB 共享;**SSH 管理**:内置 SSH 终端、SSH 状态一键体检、自定义命令执行、**环境自检与依赖安装** |
-| NAS 状态 | 远程采集运行快照:系统 / 运行(在线时长、负载)/ 内存 / 硬盘(容量、类型、接口、型号、SMART 健康,点击单盘查看完整 SMART 详情)/ 网络(内网 IP、公网 IP、网关、DNS、网卡速率)/ 磁盘空间(挂载点用量) |
-| 文件管理 | 经 SMB 浏览共享与目录,支持上传、下载、新建文件夹、删除;文件可**拖入即上传**、**拖出即下载**;右键共享或文件夹可**映射为本地网络驱动器**(也可一键断开) |
-| Docker | 远程管理 NAS 上的容器(查看 / 启动 / 停止 / 重启 / 日志等)与 compose 项目 |
-| 网络诊断 | Ping 报告(丢包率 / 最短 / 最长 / 平均延迟)、NAS 外网连通性测试、常用 NAS 端口探测(SSH 22 / SMB 445 / 群晖 5000 等)、DNS 解析、网速测试 |
-| Web 管理 | 左侧选择 NAS 设备,应用内(WebView2)直接打开其 Web 管理界面,支持后退 / 前进 / 刷新 |
-| SSH 终端(Shell) | 基于 xterm.js + WebView2 的交互式终端,内嵌于应用内 |
-| 关于 | 功能说明 / 数据存放位置 / 使用须知 |
 
 <details>
 <summary>点击展开各页面详细说明</summary>
@@ -110,22 +94,20 @@
 
 > 项目只在 NAS 上执行只读命令与 docker 命令,不装服务、不改配置 —— 但下列命令必须存在
 
-| 包 | 项目里谁在用 | 缺了会怎样 |
-|---|---|---|
-| `openssh-server` | 全部远程功能走 SSH | 全部不可用 |
-| `sudo` | 设备权限三态(sudo / root 登录) | 只能普通用户,部分采集拿不到 |
-| `iproute2` | `ip -o -4 addr`、`ip route`(网卡、IP、网关、速率) | 网络卡片全空 |
-| `util-linux` | `lsblk`(硬盘列表、容量、接口、型号) | 硬盘卡片为空 |
-| `smartmontools` | `smartctl -H` / `-a`(健康自评 + SMART 详情) | 健康度「未知」,详情打不开 |
-| `dmidecode` | `-t 17`(内存型号,需 root) | 内存型号显示「—」 |
-| `pciutils` | `lspci`(系统卡片 GPU 行) | GPU 显示「—」 |
-| `curl` | 公网 IP 查询、外网诊断 | 公网 IP 显示「—」 |
-| `iputils-ping` | `ping -c N -W 2`(NAS 外网诊断) | 连通性测试失败 |
-| `samba` | 文件管理页与共享枚举(445) | 文件管理、共享列表不可用 |
-| `docker-ce` | Docker 页:`ps / start / stop / rm / logs / images / pull / run` | Docker 页整页报错 |
-| `docker-compose-plugin` | `docker compose version`(compose 项目列表) | compose 列表报错 |
-
-`uptime`、`nproc`、`df`、`cat`、`grep`、`sed`、`awk`、`uname` 属 coreutils / procps / gawk,主流发行版自带,无需安装。
+| 包 | 需求项目                                                           | 缺失影响           |
+|---|----------------------------------------------------------------|----------------|
+| `openssh-server` | 全部远程功能走 SSH                                                    | 全部不可用          |
+| `sudo` | 设备权限三态(sudo / root 登录)                                         | 只能普通用户,部分采集拿不到 |
+| `iproute2` | `ip -o -4 addr`、`ip route`(网卡、IP、网关、速率)                        | 网络卡片全空         |
+| `util-linux` | `lsblk`(硬盘列表、容量、接口、型号)                                         | 硬盘卡片为空         |
+| `smartmontools` | `smartctl -H` / `-a`(健康自评 + SMART 详情)                          | 健康度「未知」,详情打不开  |
+| `dmidecode` | `-t 17`(内存型号,需 root)                                           | 内存型号显示「—」      |
+| `pciutils` | `lspci`(系统卡片 GPU 行)                                            | GPU 显示「—」      |
+| `curl` | 公网 IP 查询、外网诊断                                                  | 公网 IP 显示「—」    |
+| `iputils-ping` | `ping -c N -W 2`(NAS 外网诊断)                                     | 连通性测试失败        |
+| `samba` | 文件管理页与共享枚举(445)                                                | 文件管理、共享列表不可用   |
+| `docker-ce` | Docker 页:`ps / start / stop / rm / logs / images / pull / run` | Docker 页整页报错   |
+| `docker-compose-plugin` | `docker compose version`(compose 项目列表)                         | compose 列表报错   |
 
 一条命令装齐(Debian / Ubuntu):
 
