@@ -4,7 +4,7 @@
 
 **面向家用 NAS 的 Windows 桌面管理工具** -- 基于 WinUI 3 / .NET 10 全新打造,非打包(Unpackaged)形态,解压即用
 
-![License](https://img.shields.io/badge/License-GPLv3-blue.svg) ![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet) ![WinUI](https://img.shields.io/badge/WinUI-3-0078D4) ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B-0078D4?logo=windows) ![Version](https://img.shields.io/badge/Version-1.0.3-orange) ![Stars](https://img.shields.io/github/stars/Fontaine-superstar/NasToolBox?color=ffcb47&style=flat)
+![License](https://img.shields.io/badge/License-GPLv3-blue.svg) ![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet) ![WinUI](https://img.shields.io/badge/WinUI-3-0078D4) ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B-0078D4?logo=windows) ![Version](https://img.shields.io/badge/Version-1.0.4-orange) ![Stars](https://img.shields.io/github/stars/Fontaine-superstar/NasToolBox?color=ffcb47&style=flat)
 
 [快速开始](#快速开始) · [功能总览](#功能总览) · [NAS 端依赖](#nas-端依赖) · [使用须知](#使用须知) · [问题反馈](https://github.com/Fontaine-superstar/NasToolBox/issues)
 
@@ -15,7 +15,6 @@
 
 ## 目录
 
-- 功能亮点
 - 功能总览
 - NAS 端依赖
 - 快速开始
@@ -106,16 +105,10 @@
 | `docker-ce` | Docker 页:`ps / start / stop / rm / logs / images / pull / run` | Docker 页整页报错   |
 | `docker-compose-plugin` | `docker compose version`(compose 项目列表)                         | compose 列表报错   |
 
-一条命令装齐(Debian / Ubuntu):
-
-```bash
-sudo apt install -y openssh-server sudo iproute2 util-linux smartmontools \
-  dmidecode pciutils curl iputils-ping samba docker-ce docker-compose-plugin
-```
 
 ### 一键自检
 
-不用手敲:「设备管理」里点设备行的 **环境自检**(或编辑设备后点测试连接),程序会用单条 SSH 命令探测上述组件,列出缺失项及其影响;设备开了 sudo 提权或 root 登录时,可直接点按钮让程序装,装完自动复检。群晖 / UnRAID / TrueNAS 这类没有通用包管理器的系统,只提示不硬装。
+「设备管理」里点设备行的 **环境自检**(或编辑设备后点测试连接),程序会用单条 SSH 命令探测上述组件,列出缺失项及其影响;设备开了 sudo 提权或 root 登录时,可直接点按钮让程序装,装完自动复检。群晖 / UnRAID / TrueNAS 这类没有通用包管理器的系统,只提示不硬装。
 
 ### 还需要两条配置
 
@@ -161,17 +154,7 @@ dotnet publish -c Release -r win-x64 -o publish\x64
 
 ## 系统兼容性
 
-| 平台 | 支持状态 |
-|---|---|
-| x64 (Intel/AMD 64 位) | ✅ 完全支持 |
-| ARM64 (高通骁龙等) | ✅ 完全支持 |
-| x86 (Intel/AMD 32 位) | ✅ 完全支持 |
-
-| Windows 版本 | 支持状态 |
-|---|---|
-| Windows 11 | ✅ 完全支持 |
-| Windows 10 19041+ | ✅ 完全支持 |
-| Windows 10 19041 以下 | ❌ 不支持(WinAppSDK 最低要求) |
+Windows 10 19041 及更高版本与 Windows 11
 
 * * *
 

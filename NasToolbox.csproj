@@ -22,11 +22,13 @@
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.0.3</Version>
+    <Version>1.0.4</Version>
     <!-- 自包含发布:把 .NET 运行时一起带上,目标机无需预装 .NET(此前默认依赖框架,换机就跑不起来) -->
     <SelfContained>true</SelfContained>
     <!-- 永不裁剪:WinUI3 反射依赖多,Trim 不安全 -->
     <PublishTrimmed>false</PublishTrimmed>
+    <!-- 只保留简中 / 繁中 / 英文的卫星资源:默认会把 80+ 个语言目录打进包(约 11MB),运行时永远用不到 -->
+    <SatelliteResourceLanguages>zh-Hans;zh-Hant;en</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <ItemGroup>
@@ -50,5 +52,14 @@
     <Content Include="img\**\*" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <Content Include="Assets\Terminal\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <!--
+    WinAppSDK 自包含发布会把 80+ 个 WinUI 的 MUI 语言目录(Microsoft.ui.xaml.dll.mui)打进包,
+    这些不受 SatelliteResourceLanguages 控制(那是给 .NET 卫星程序集用的)。
+    发布后只保留简中 / 繁中 / 英文,其余整目录删除:约省 4MB、目录从 90+ 降到个位数。
+  -->
+  <Target Name="TrimUnusedLanguageFolders" AfterTargets="Publish">
+    <Exec Command="powershell -NoProfile -NonInteractive -Command &quot;$keep=@('zh-hans','zh-hant','zh-cn','zh-tw','en','en-us','en-gb'); Get-ChildItem -LiteralPath '$(PublishDir)' -Directory | Where-Object { $_.Name -match '^[a-z]{2}(-[A-Za-z]{2,4})?$' -and ($keep -notcontains $_.Name.ToLower()) } | Remove-Item -Recurse -Force&quot;" />
+  </Target>
 
 </Project>
