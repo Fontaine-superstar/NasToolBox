@@ -13,31 +13,12 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- WinAppSDK 新版 TitleBar 控件:标题 + 自定义内容(统一搜索框) -->
+        <!-- WinAppSDK 新版 TitleBar 控件:标题 + 拖拽区 -->
         <TitleBar
             x:Name="AppTitleBar"
             Grid.Row="0"
             Title="NAS 工具箱"
-            IsBackButtonVisible="False">
-            <TitleBar.Content>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="320" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-
-                    <AutoSuggestBox
-                        x:Name="SearchBox"
-                        Grid.Column="0"
-                        Width="320"
-                        PlaceholderText="搜索 NAS 设备..."
-                        QueryIcon="Find"
-                        VerticalAlignment="Center"
-                        TextChanged="SearchBox_TextChanged"
-                        QuerySubmitted="SearchBox_QuerySubmitted" />
-                </Grid>
-            </TitleBar.Content>
-        </TitleBar>
+            IsBackButtonVisible="False" />
 
         <NavigationView
             x:Name="NavView"

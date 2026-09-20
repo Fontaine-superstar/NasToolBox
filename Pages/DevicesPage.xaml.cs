@@ -18,7 +18,6 @@ public sealed partial class DevicesPage : Page
     private readonly List<NasDevice> _devices = new();
     private List<DeviceRow> _rows = new();
     private DeviceRow? _editing;
-    private string? _filter;
 
     public DevicesPage()
     {
@@ -28,7 +27,6 @@ public sealed partial class DevicesPage : Page
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        _filter = e.Parameter as string;
         // 页面设置了 NavigationCacheMode=Enabled,Loaded 只触发一次,这里手动刷新
         if (IsLoaded) Reload();
     }
@@ -45,22 +43,11 @@ public sealed partial class DevicesPage : Page
             NasDeviceStore.Save(_devices);
         }
 
-        var query = _filter?.Trim();
-        IEnumerable<NasDevice> shown = _devices;
-        if (!string.IsNullOrEmpty(query))
-        {
-            shown = shown.Where(d =>
-                d.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                d.Host.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                d.Hostname.Contains(query, StringComparison.OrdinalIgnoreCase));
-        }
-
-        _rows = shown.Select(d => new DeviceRow(d)).ToList();
+        _rows = _devices.Select(d => new DeviceRow(d)).ToList();
         DeviceList.ItemsSource = _rows;
         DeviceList.Visibility = _rows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         EmptyHint.Visibility = _rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        HeaderText.Text = string.IsNullOrEmpty(query) ? "NAS 设备管理" : $"设备搜索「{query}」";
-        _filter = null; // 只对一次导航生效
+        HeaderText.Text = "NAS 设备管理";
         UpdateCurrentHint();
 
         // 先把上次检测的结果显示出来,再后台跑一次实时检测
@@ -103,7 +90,7 @@ public sealed partial class DevicesPage : Page
 
     private void SetCurrent(DeviceRow? target)
     {
-        // 直接改设备对象并保存(含被搜索过滤掉的设备,避免它们残留旧标记)
+        // 直接改设备对象并保存(遍历完整台账,避免残留旧的「当前」标记)
         NasDeviceStore.SetCurrent(_devices, target?.Device);
 
         // 通知所有行刷新复选框:未选中的行会自动取消勾选

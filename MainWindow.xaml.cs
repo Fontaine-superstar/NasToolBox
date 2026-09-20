@@ -7,8 +7,6 @@ namespace NasToolbox;
 
 public sealed partial class MainWindow : Window
 {
-    private const string DevPrefix = "设备 · ";
-
     /// <summary>主窗口单例:供页面同步侧栏选中状态(如跳转到 Docker 管理)。</summary>
     public static MainWindow? Instance { get; private set; }
 
@@ -69,36 +67,5 @@ public sealed partial class MainWindow : Window
         {
             NavFrame.Navigate(page, null, args.RecommendedNavigationTransitionInfo);
         }
-    }
-
-    /// <summary>顶栏搜索:按名称 / 地址 / 主机名 / 备注匹配 NAS 设备。</summary>
-    private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
-    {
-        if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput) return;
-        var q = sender.Text?.Trim() ?? string.Empty;
-        if (string.IsNullOrEmpty(q)) { sender.ItemsSource = null; return; }
-
-        var devices = NasDeviceStore.Load()
-            .Where(d => d.DisplayName.Contains(q, StringComparison.OrdinalIgnoreCase)
-                        || d.Host.Contains(q, StringComparison.OrdinalIgnoreCase)
-                        || d.Hostname.Contains(q, StringComparison.OrdinalIgnoreCase)
-                        || d.Note.Contains(q, StringComparison.OrdinalIgnoreCase))
-            .Select(d => DevPrefix + d.DisplayName)
-            .Take(8);
-
-        sender.ItemsSource = devices.ToList();
-    }
-
-    private void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
-    {
-        var text = (args.ChosenSuggestion as string) ?? args.QueryText;
-        if (string.IsNullOrWhiteSpace(text)) return;
-
-        var query = text.StartsWith(DevPrefix, StringComparison.Ordinal) ? text[DevPrefix.Length..] : text;
-
-        NavView.SelectedItem = NavView.MenuItems
-            .OfType<NavigationViewItem>()
-            .First(i => (string?)i.Tag == "devices");
-        NavFrame.Navigate(typeof(DevicesPage), query);
     }
 }

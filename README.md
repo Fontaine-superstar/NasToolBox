@@ -4,7 +4,7 @@
 
 **面向家用 NAS 的 Windows 桌面管理工具** -- 基于 WinUI 3 / .NET 10 全新打造,非打包(Unpackaged)形态,解压即用
 
-![License](https://img.shields.io/badge/License-GPLv3-blue.svg) ![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet) ![WinUI](https://img.shields.io/badge/WinUI-3-0078D4) ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B-0078D4?logo=windows) ![Version](https://img.shields.io/badge/Version-0.2.0-orange) ![Stars](https://img.shields.io/github/stars/Fontaine-superstar/NasToolBox?color=ffcb47&style=flat)
+![License](https://img.shields.io/badge/License-GPLv3-blue.svg) ![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet) ![WinUI](https://img.shields.io/badge/WinUI-3-0078D4) ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B-0078D4?logo=windows) ![Version](https://img.shields.io/badge/Version-1.0.0-orange) ![Stars](https://img.shields.io/github/stars/Fontaine-superstar/NasToolBox?color=ffcb47&style=flat)
 
 [快速开始](#快速开始) · [功能总览](#功能总览) · [NAS 端依赖](#nas-端依赖) · [使用须知](#使用须知) · [问题反馈](https://github.com/Fontaine-superstar/NasToolBox/issues)
 
@@ -31,7 +31,7 @@
 
 ## 功能亮点
 
-**设备台账** 一台 NAS 一张卡:名称 / IP / MAC / Web 端口 / SSH 账号;一键 Ping、打开 Web 后台、WOL 唤醒、打开 SMB 共享,顶栏搜索直达
+**设备台账** 一台 NAS 一张卡:名称 / IP / MAC / Web 端口 / SSH 账号;一键 Ping、打开 Web 后台、WOL 唤醒、打开 SMB 共享
 
 **实时状态快照** 一次 SSH 往返批量采集系统 / 运行 / 内存 / 硬盘 / 网络 / 磁盘空间;点单块硬盘可看完整 SMART 详情
 
@@ -62,8 +62,6 @@
 | Web 管理 | 左侧选择 NAS 设备,应用内(WebView2)直接打开其 Web 管理界面,支持后退 / 前进 / 刷新 |
 | SSH 终端(Shell) | 基于 xterm.js + WebView2 的交互式终端,内嵌于应用内 |
 | 关于 | 功能说明 / 数据存放位置 / 使用须知 |
-
-顶栏搜索框:按名称 / 地址 / 主机名 / 备注匹配 NAS 设备,回车直达「设备管理」并自动过滤。
 
 <details>
 <summary>点击展开各页面详细说明</summary>
