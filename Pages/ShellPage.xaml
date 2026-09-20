@@ -36,7 +36,9 @@
         <Border Grid.Row="1" Background="#1E1E1E" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1" CornerRadius="8">
             <Grid>
-                <WebView2 x:Name="TermWeb" WebMessageReceived="TermWeb_WebMessageReceived" />
+                <!-- DefaultBackgroundColor 透明:否则 WebView2 的白色底会在顶部边缘漏出一条白线 -->
+                <WebView2 x:Name="TermWeb" DefaultBackgroundColor="Transparent"
+                          WebMessageReceived="TermWeb_WebMessageReceived" />
                 <StackPanel x:Name="EmptyHint" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
                     <FontIcon Glyph="&#xE756;" FontSize="40" Foreground="#66FFFFFF" HorizontalAlignment="Center" />
                     <TextBlock Text="选择设备后点击「连接」打开 SSH 终端" Foreground="#DDDDDD"
