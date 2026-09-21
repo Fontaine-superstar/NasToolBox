@@ -9,21 +9,24 @@
     xmlns:conv="using:NasToolbox.Converters"
     mc:Ignorable="d">
 
-    <ScrollViewer>
-        <StackPanel Padding="24,16" Spacing="12" MaxWidth="1200" HorizontalAlignment="Stretch">
+    <ScrollViewer HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
+        <!-- 不用 MaxWidth 居中:ScrollViewer 内容在窗口尺寸变化时居中排版会错乱(内容右移被裁),直接随窗口拉伸 -->
+        <StackPanel Padding="24,16" Spacing="12">
 
             <TextBlock Text="网络诊断" Style="{StaticResource TitleTextBlockStyle}" Margin="0,0,0,4" />
 
-            <!-- 两个 Ping 类卡片并排,避免右侧留白 -->
-            <Grid ColumnSpacing="12" RowSpacing="12">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
+            <!-- 三张卡片单列堆叠:任意窗口宽度下按钮都不会被窗口边缘裁掉 -->
+            <Grid RowSpacing="12">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
             <!-- Ping -->
             <Border
-                Grid.Column="0"
+                x:Name="PingCard"
+                Grid.Row="0"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1" CornerRadius="8" Padding="16,12">
@@ -32,7 +35,7 @@
                     <!-- 星号列布局:窗口变窄时输入框自动收缩,按钮不会被遮挡 -->
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" MinWidth="140" />
+                            <ColumnDefinition Width="*" MinWidth="80" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
@@ -55,7 +58,8 @@
 
             <!-- NAS 外网诊断(命令在 NAS 上执行,测的是 NAS 自己的外网连通性) -->
             <Border
-                Grid.Column="1"
+                x:Name="NasDiagCard"
+                Grid.Row="1"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1" CornerRadius="8" Padding="16,12">
@@ -70,7 +74,7 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" MinWidth="100" />
+                            <ColumnDefinition Width="*" MinWidth="70" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
@@ -103,7 +107,8 @@
 
             <!-- Speedtest-x 网速测试(基于 Docker) -->
             <Border
-                Grid.Row="1" Grid.ColumnSpan="2"
+                x:Name="SpeedCard"
+                Grid.Row="2"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1" CornerRadius="8" Padding="16,12">
@@ -113,7 +118,7 @@
                                Text="基于 speedtest-x 的网速测试,需要先在 Docker 部署 speedtest-x。" />
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" MinWidth="180" />
+                            <ColumnDefinition Width="*" MinWidth="100" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
