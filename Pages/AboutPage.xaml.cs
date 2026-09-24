@@ -12,9 +12,6 @@ public sealed partial class AboutPage : Page
     public AboutPage()
     {
         InitializeComponent();
-
-        // 版本号统一取自 InformationalVersion(csproj 里的 InformationalVersion),不再硬编码
-        VersionRun.Text = $"NAS 工具箱 {AppVersion.Display}";
     }
 
     /// <summary>用系统默认浏览器打开项目主页。</summary>

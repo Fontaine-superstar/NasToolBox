@@ -8,7 +8,7 @@
         <StackPanel Padding="24,16" Spacing="10" MaxWidth="800">
             <TextBlock Text="关于" Style="{StaticResource TitleTextBlockStyle}" Margin="0,0,0,4" />
             <TextBlock TextWrapping="Wrap">
-                <Run x:Name="VersionRun" Text="NAS 工具箱" /> -- 基于 WinUI 3 / .NET 10 构建的桌面应用。<LineBreak/>
+                NAS 工具箱 -- 基于 WinUI 3 / .NET 10 构建的桌面应用。<LineBreak/>
                 令 NAS 用户更加方便使用 NAS 的一款开源软件。
             </TextBlock>
 
