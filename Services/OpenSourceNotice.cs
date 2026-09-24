@@ -41,7 +41,7 @@ public static class OpenSourceNotice
                 FontSize = 13,
                 Text = "· 本程序源代码可自由使用、修改和分发;衍生作品必须以相同协议(GPL-3.0)开源\n" +
                        "· 本程序按「现状」提供,不附带任何明示或默示的担保;使用产生的一切风险由使用者自行承担\n" +
-                       "· UI 模式参考了开源项目 TubaWinUi3(github.com/luolangaga/tubatools,GPL-3.0)\n" +
+                       "· 界面基于原生 WinUI 3 构建\n" +
                        "· 完整许可证文本见程序目录下的 LICENSE 文件",
             };
             panel.Children.Add(body);
