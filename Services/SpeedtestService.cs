@@ -22,14 +22,20 @@ public static class SpeedtestService
     /// <summary>测速页地址(按容器实际映射的宿主端口)。</summary>
     public static string UrlOf(NasDevice d, int port) => $"http://{d.Host}:{port}/";
 
-    /// <summary>在 NAS 上扫描 speedtest-x 容器(按容器名或镜像名匹配);SSH / docker 异常直接抛出。</summary>
+    /// <summary>
+    /// 在 NAS 上扫描 speedtest-x 容器:仅按容器名精确匹配(忽略大小写;{{.Names}} 可能是「主名,别名」,
+    /// 只取第一段)。镜像名不参与判断 —— 否则其他容器恰好用了同名镜像、或镜像名含该子串时,
+    /// 会被误认为已部署,导致容器不存在时该弹的引导提示不弹。SSH / docker 异常直接抛出。
+    /// </summary>
     public static async Task<DockerContainer?> FindAsync(NasDevice device, CancellationToken ct = default)
     {
         var list = await DockerService.ListAsync(device, ct).ConfigureAwait(false);
-        return list.FirstOrDefault(x =>
-            x.Name.Contains(ContainerName, StringComparison.OrdinalIgnoreCase) ||
-            x.Image.Contains(ContainerName, StringComparison.OrdinalIgnoreCase));
+        return list.FirstOrDefault(IsSpeedtest);
     }
+
+    /// <summary>判断是否 speedtest-x 容器:按容器名精确匹配(忽略大小写;{{.Names}} 可能是「主名,别名」,只取第一段)。镜像名不参与判断。</summary>
+    public static bool IsSpeedtest(DockerContainer c) =>
+        c.Name.Split(',')[0].Trim().Equals(ContainerName, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>启动已部署但未运行的容器。</summary>
     public static async Task StartAsync(NasDevice device, string containerName, CancellationToken ct = default)

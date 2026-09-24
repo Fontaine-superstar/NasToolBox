@@ -78,6 +78,18 @@
             <Grid Grid.Column="1">
                 <!-- 容器 -->
                 <StackPanel x:Name="ContainerPanel">
+                    <!-- speedtest-x 容器不存在时的获取引导:在线拉取 / 从 Releases 下载本地镜像离线导入 -->
+                    <InfoBar x:Name="SpeedtestHintBar" IsOpen="False" IsClosable="True" Severity="Informational"
+                             Title="未发现 speedtest-x 容器" Margin="0,0,0,8">
+                        <InfoBar.Content>
+                            <!-- 提示文字里放不下可点击链接,Releases 地址单独做成超链接,点了直接打开下载页 -->
+                            <HyperlinkButton x:Name="ReleasesLink" Click="ReleasesLink_Click" Padding="0"
+                                             FontSize="12" />
+                        </InfoBar.Content>
+                        <InfoBar.ActionButton>
+                            <Button Content="去部署" Click="SpeedtestHintDeploy_Click" />
+                        </InfoBar.ActionButton>
+                    </InfoBar>
                     <ListView x:Name="ContainerList" SelectionMode="None">
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="models:DockerContainer">

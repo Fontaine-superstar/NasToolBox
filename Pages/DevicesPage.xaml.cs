@@ -98,6 +98,16 @@ public sealed partial class DevicesPage : Page
         UpdateCurrentHint();
     }
 
+    /// <summary>设备卡片「快速跳转」:把该设备设为「当前管理」后,直达对应功能页(状态/终端/文件/Docker/诊断)。</summary>
+    private void JumpBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: DeviceRow row } fe) return;
+        if (fe.Tag as string is not { Length: > 0 } tag) return;
+
+        if (!row.Device.IsCurrent) SetCurrent(row); // 目标功能页默认读取「当前管理」设备
+        MainWindow.Instance?.NavigateByTag(tag);
+    }
+
     private void UpdateCurrentHint()
     {
         var current = NasDeviceStore.GetCurrent(_devices);

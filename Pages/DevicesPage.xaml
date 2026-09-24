@@ -106,6 +106,21 @@
                                 <Button Content="环境自检" Click="DepBtn_Click" FontSize="12" Padding="10,4"
                                         ToolTipService.ToolTip="检查 NAS 上是否装齐 NasToolbox 用到的组件,缺失可一键安装" />
                                 <Button Content="删除" Click="DeleteBtn_Click" FontSize="12" Padding="10,4" />
+
+                                <!-- 快速跳转:把这台设备设为「当前管理」后,直达对应功能页 -->
+                                <Border Width="1" Height="18" Margin="6,0,2,0"
+                                        Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                                <TextBlock Text="快速跳转" VerticalAlignment="Center" FontSize="12" Opacity="0.6" />
+                                <Button Content="状态" Tag="status" Click="JumpBtn_Click" FontSize="12" Padding="10,4"
+                                        ToolTipService.ToolTip="跳到「NAS 状态」,默认查看这台设备" />
+                                <Button Content="终端" Tag="shell" Click="JumpBtn_Click" FontSize="12" Padding="10,4"
+                                        ToolTipService.ToolTip="跳到「终端」,默认连接这台设备" />
+                                <Button Content="文件" Tag="files" Click="JumpBtn_Click" FontSize="12" Padding="10,4"
+                                        ToolTipService.ToolTip="跳到「文件管理」,默认浏览这台设备" />
+                                <Button Content="Docker" Tag="docker" Click="JumpBtn_Click" FontSize="12" Padding="10,4"
+                                        ToolTipService.ToolTip="跳到「Docker 管理」,默认操作这台设备" />
+                                <Button Content="诊断" Tag="network" Click="JumpBtn_Click" FontSize="12" Padding="10,4"
+                                        ToolTipService.ToolTip="跳到「网络诊断」,默认对这台设备执行" />
                             </StackPanel>
                         </Grid>
                     </Border>

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
@@ -64,11 +65,30 @@ public sealed partial class DockerPage : Page
                   "也可点上方「建议镜像」用随包 tar 离线导入(不走拉取)。端口映射形如 宿主端口:80," +
                   "9000 被占用就换一个,部署完回网络诊断页测速。"
                 : "测速需要 badapple9/speedtest-x 容器。已预填镜像与容器名,保持勾选「部署前先拉取镜像」即可在线拉取" +
-                  "(约 460 MB,需 NAS 能联网);本机 img\\ 目录下没有离线镜像 tar 时只能在线拉取。" +
-                  "端口映射形如 宿主端口:80,9000 被占用就换一个,部署完回网络诊断页测速。",
+                  "(约 460 MB,需 NAS 能联网)。本机 img\\ 目录下没有离线镜像 tar;如需离线导入,可从 " +
+                  $"{DockerService.ReleasesUrl} 下载安装包,把包内 img\\ 里的 {DockerService.LocalImageFileName} " +
+                  "放到本程序 img\\ 目录,重开此对话框点「建议镜像」即可。端口映射形如 宿主端口:80," +
+                  "9000 被占用就换一个,部署完回网络诊断页测速。",
             InfoBarSeverity.Informational);
 
         _ = CreateDialog.ShowAsync();
+    }
+
+    /// <summary>容器列表页 InfoBar 的「去部署」:打开预填 speedtest-x 的部署对话框(与测速页跳转进来时一致)。</summary>
+    private void SpeedtestHintDeploy_Click(object sender, RoutedEventArgs e) =>
+        _ = ShowSpeedtestDeployHintAsync();
+
+    /// <summary>InfoBar 里的 Releases 链接:用系统浏览器打开下载页。</summary>
+    private void ReleasesLink_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(DockerService.ReleasesUrl) { UseShellExecute = true });
+        }
+        catch
+        {
+            // 打不开浏览器也不影响用户手动复制链接文字
+        }
     }
 
     private NasDevice? Current => DeviceBox.SelectedItem as NasDevice;
@@ -91,6 +111,7 @@ public sealed partial class DockerPage : Page
         if (empty)
         {
             EmptyText.Text = "还没有 NAS 设备";
+            SpeedtestHintBar.IsOpen = false;
             StatusText.Text = "";
             return;
         }
@@ -122,6 +143,14 @@ public sealed partial class DockerPage : Page
             var list = await DockerService.ListAsync(device);
             ContainerList.ItemsSource = list;
 
+            // speedtest-x 容器不存在(按容器名精确匹配)时提示获取方式:在线拉取 / 从 Releases 下载本地镜像离线导入
+            SpeedtestHintBar.Message =
+                "「网络诊断」页测速需要它。在线:点「去部署」拉取 badapple9/speedtest-x(容器名保持 speedtest-x);" +
+                $"离线:从下方链接下载安装包,把包内 img\\ 目录里的 {DockerService.LocalImageFileName} " +
+                "放到本程序 img\\ 目录,部署时点「建议镜像」即可离线导入。";
+            ReleasesLink.Content = DockerService.ReleasesUrl;
+            SpeedtestHintBar.IsOpen = !list.Any(SpeedtestService.IsSpeedtest);
+
             var running = list.Count(c => c.Running);
             EmptyHint.Visibility = list.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             ContainerList.Visibility = list.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
@@ -132,11 +161,13 @@ public sealed partial class DockerPage : Page
         catch (SshConnectException ex)
         {
             ContainerList.ItemsSource = null;
+            SpeedtestHintBar.IsOpen = false; // 扫描失败无法判断,收起提示
             StatusText.Text = $"连接失败:{ex.FriendlyMessage}\r\n{SshService.HintFor(ex.Failure)}";
         }
         catch (Exception ex)
         {
             ContainerList.ItemsSource = null;
+            SpeedtestHintBar.IsOpen = false;
             StatusText.Text = ex.Message;
         }
         finally
@@ -329,6 +360,15 @@ public sealed partial class DockerPage : Page
         catch (Exception ex)
         {
             StatusText.Text = "部署失败:" + ex.Message;
+
+            // speedtest-x 镜像获取失败(在线拉取没成功,或 docker run 发现本地也没有该镜像)时,
+            // 引导从 Releases 下载随包的本地镜像 tar 离线导入
+            var speedtestMissed =
+                image.Contains(SpeedtestService.ContainerName, StringComparison.OrdinalIgnoreCase) &&
+                ((pull && localTar.Length == 0) ||
+                 ex.Message.Contains("Unable to find image", StringComparison.OrdinalIgnoreCase));
+            if (speedtestMissed)
+                await OfferSpeedtestMirrorAsync();
         }
         finally
         {
@@ -357,6 +397,59 @@ public sealed partial class DockerPage : Page
         CdError.Message = message;
         CdError.Severity = severity;
         CdError.IsOpen = true;
+    }
+
+    /// <summary>
+    /// badapple9/speedtest-x 镜像获取失败时的引导:从 Releases 下载随包的本地镜像 tar,放到 img\ 下离线导入。
+    /// 主按钮=打开下载页,关闭=取消。
+    /// </summary>
+    private async Task OfferSpeedtestMirrorAsync()
+    {
+        BusyRing.Visibility = Visibility.Collapsed; // 先收起进度环,避免对话框期间一直转
+
+        var panel = new StackPanel { Spacing = 8 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = "在线获取 badapple9/speedtest-x 镜像失败:镜像源可能没有该镜像,或 NAS 无法访问 Docker Hub。",
+            TextWrapping = TextWrapping.Wrap,
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"可改用本地镜像离线导入:从下面的 Releases 页下载安装包,把包内 img\\ 目录里的 " +
+                   $"{DockerService.LocalImageFileName} 放到本应用目录的 img\\ 下,重新打开「部署容器」," +
+                   "点「建议镜像」选中它即可,程序会自动上传并 docker load,不需要联网拉取。",
+            TextWrapping = TextWrapping.Wrap,
+        });
+        panel.Children.Add(new HyperlinkButton
+        {
+            Content = DockerService.ReleasesUrl,
+            NavigateUri = new Uri(DockerService.ReleasesUrl),
+            Padding = new Thickness(0),
+        });
+
+        var dlg = new ContentDialog
+        {
+            Title = "未找到 badapple9/speedtest-x 镜像",
+            Content = panel,
+            PrimaryButtonText = "打开 Releases 下载页",
+            CloseButtonText = "关闭",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = XamlRoot,
+        };
+        if (await dlg.ShowAsync() != ContentDialogResult.Primary) return;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(DockerService.ReleasesUrl) { UseShellExecute = true });
+        }
+        catch
+        {
+            // 打不开浏览器也不影响用户手动复制对话框里的链接
+        }
+
+        StatusText.Text =
+            $"已打开下载页:下载后把其中 img\\ 里的 {DockerService.LocalImageFileName} 放到本应用目录的 img\\ 下," +
+            "再点「部署容器」用「建议镜像」离线导入。";
     }
 
     // ---------- 二级分区:概览 / Compose / 镜像 / 网络 ----------

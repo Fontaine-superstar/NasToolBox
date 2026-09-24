@@ -211,7 +211,7 @@ public sealed partial class NetworkToolsPage : Page
                 {
                     OpenReleasesPage();
                     SpeedStatus.Text =
-                        $"已打开下载页:下载后把其中 img\\ 里的 {LocalImageFileName} 放到本应用目录的 img\\ 下," +
+                        $"已打开下载页:下载后把其中 img\\ 里的 {DockerService.LocalImageFileName} 放到本应用目录的 img\\ 下," +
                         $"再到「Docker 管理 → 部署容器」点「建议镜像」离线导入。";
                 }
                 else if (choice == ContentDialogResult.Secondary)
@@ -273,17 +273,11 @@ public sealed partial class NetworkToolsPage : Page
         MainWindow.Instance?.NavigateByTag("docker");
     }
 
-    /// <summary>Releases 页面:随安装包附带 speedtest-x 的本地镜像 tar,供离线导入。</summary>
-    private const string ReleasesUrl = "https://github.com/Fontaine-superstar/NasToolBox/releases";
-
-    /// <summary>随包镜像的文件名(下载后放到本应用目录的 img\ 下即可被「建议镜像」识别)。</summary>
-    private const string LocalImageFileName = "badapple9_speedtest-x(latest).tar";
-
     private static void OpenReleasesPage()
     {
         try
         {
-            Process.Start(new ProcessStartInfo(ReleasesUrl) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(DockerService.ReleasesUrl) { UseShellExecute = true });
         }
         catch
         {
@@ -301,7 +295,7 @@ public sealed partial class NetworkToolsPage : Page
 
         panel.Children.Add(new TextBlock
         {
-            Text = "测速需要 NAS 上有 badapple9/speedtest-x 容器,当前没有找到。两种获取方式:",
+            Text = "测速需要 NAS 上有名为 speedtest-x 的容器(镜像 badapple9/speedtest-x;按容器名查找,名字不同会被视为未部署),当前没有找到。两种获取方式:",
             TextWrapping = TextWrapping.Wrap,
         });
         panel.Children.Add(new TextBlock
@@ -312,15 +306,15 @@ public sealed partial class NetworkToolsPage : Page
         });
         panel.Children.Add(new TextBlock
         {
-            Text = $"2) 离线导入:从下面的 Releases 页下载安装包,把其中 img\\ 目录里的 {LocalImageFileName} " +
+            Text = $"2) 离线导入:从下面的 Releases 页下载安装包,把其中 img\\ 目录里的 {DockerService.LocalImageFileName} " +
                    $"放到本应用目录的 img\\ 下,再在部署对话框里点「建议镜像」,程序会自动上传并 docker load," +
                    $"不需要联网拉取。",
             TextWrapping = TextWrapping.Wrap,
         });
         panel.Children.Add(new HyperlinkButton
         {
-            Content = ReleasesUrl,
-            NavigateUri = new Uri(ReleasesUrl),
+            Content = DockerService.ReleasesUrl,
+            NavigateUri = new Uri(DockerService.ReleasesUrl),
             Padding = new Thickness(0),
         });
 

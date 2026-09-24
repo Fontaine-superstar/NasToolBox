@@ -317,6 +317,12 @@ public static class DockerService
 
     // ---------- 本机镜像(应用目录 img\ 下的 tar)----------
 
+    /// <summary>Releases 页面:随安装包附带 speedtest-x 的本地镜像 tar,供离线下载导入。</summary>
+    public const string ReleasesUrl = "https://github.com/Fontaine-superstar/NasToolBox/releases";
+
+    /// <summary>随包镜像的 tar 文件名(下载 Release 附件后放到本应用目录 img\ 下即可被「建议镜像」识别)。</summary>
+    public const string LocalImageFileName = "badapple9_speedtest-x(latest).tar";
+
     /// <summary>本机镜像 tar 存放目录:应用目录下 img\。</summary>
     public static string LocalImageDir => Path.Combine(AppContext.BaseDirectory, "img");
 
