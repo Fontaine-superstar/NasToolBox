@@ -19,11 +19,6 @@
                 · 文件管理:经 SMB 浏览 NAS 共享(上传 / 下载 / 拖拽互传),右键可把共享或文件夹映射为本地网络驱动器
             </TextBlock>
 
-            <InfoBar IsOpen="True" Severity="Informational" Title="数据存放"
-                     Message="设备列表保存在 %LocalAppData%\NasToolbox\devices.json;设备在线状态在 device_status.json;SSH 主机指纹在 known_hosts.json。" />
-            <InfoBar IsOpen="True" Severity="Warning" Title="使用须知"
-                     Message="Wake-on-LAN 需要 NAS 的 BIOS/UEFI 与网卡开启相应支持;SMB 匿名枚举被禁用时,请在 Windows 凭据管理器保存该 NAS 地址的 Windows 凭据;NAS 端依赖(curl / smartctl / lsblk 等)缺失时可用设备行的「环境自检」一键补装。" />
-
             <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                     CornerRadius="8" Padding="16,12" Margin="0,6,0,0">
