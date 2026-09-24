@@ -72,6 +72,33 @@
                             VerticalAlignment="Center" Click="ShowNoticeButton_Click" />
                 </Grid>
             </Border>
+
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    CornerRadius="8" Padding="16,12" Margin="0,6,0,0">
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="40" Height="40" CornerRadius="20"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                        <Path Data="M896.744632 263.078729c8.860557 5.078103 16.091107 17.553935 16.091106 27.793729v429.653448c0 10.198-7.230549 22.715627-16.091106 27.79373l-129.627449 74.750505c-8.83966 5.078103-16.049312 0.940389-16.049311-9.278508V393.416693c0-10.218898-7.230549-22.715627-16.091107-27.79373l-129.543858-74.813197c-8.860557-5.099-16.070209-0.940389-16.070209 9.257611v106.368484a18.515222 18.515222 0 0 1-18.557017 18.473427H446.172745a18.494324 18.494324 0 0 1-18.494324-18.494324V11.451435c0-10.198 7.209652-14.335713 16.070209-9.257611l48.273321 27.835525c8.860557 5.078103 16.132902 9.215816 16.300082 9.153123 0.125385-0.08359 7.418627 4.075021 16.258287 9.132225l372.185209 214.764032zM427.741114 605.108786c0-10.218898 8.296324-18.494324 18.494324-18.494324h124.632936a18.598812 18.598812 0 0 1 18.577914 18.494324v395.653148c0 10.239795-7.230549 14.356611-16.091107 9.299406l-157.546563-90.987895a612.715909 612.715909 0 0 1-15.986619-9.362098c0-0.062693-7.209652-4.283996-16.091107-9.362098L120.589053 748.382329C111.707598 743.304226 104.497946 730.807497 104.497946 720.567701v-429.653447c0-10.218898 7.209652-22.715627 16.070209-27.79373l129.627448-74.771403c8.860557-5.057205 16.070209-0.919492 16.07021 9.299406v420.437632c0 10.218898 7.209652 22.715627 15.986619 27.79373l129.627448 74.771402c8.860557 5.057205 16.091107 0.919492 16.091107-9.299405l-0.208976-106.263998z"
+                              Fill="{ThemeResource TextFillColorPrimaryBrush}"
+                              Width="20" Height="20" Stretch="Uniform"
+                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Text="作者小黑盒主页" FontWeight="SemiBold" />
+                        <TextBlock Text="aaa枫丹大明星"
+                                   FontSize="12" Opacity="0.65" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <Button Grid.Column="2" Content="访问主页"
+                            Style="{StaticResource AccentButtonStyle}"
+                            VerticalAlignment="Center" Click="OpenXiaoheiheButton_Click" />
+                </Grid>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </Page>

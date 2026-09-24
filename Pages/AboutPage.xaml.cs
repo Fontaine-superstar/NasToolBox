@@ -7,6 +7,7 @@ namespace NasToolbox.Pages;
 public sealed partial class AboutPage : Page
 {
     private const string RepoUrl = "https://github.com/Fontaine-superstar/NasToolBox";
+    private const string XiaoheiheUrl = "https://xiaoheihe.cn/app/user/profile/71347149";
 
     public AboutPage()
     {
@@ -29,4 +30,8 @@ public sealed partial class AboutPage : Page
         if (win is null) return;
         OpenSourceNotice.ShowDialog(win);
     }
+
+    /// <summary>用系统默认浏览器打开作者小黑盒主页。</summary>
+    private async void OpenXiaoheiheButton_Click(object sender, RoutedEventArgs e)
+        => _ = await Windows.System.Launcher.LaunchUriAsync(new Uri(XiaoheiheUrl));
 }
