@@ -34,4 +34,12 @@ public sealed partial class AboutPage : Page
     /// <summary>用系统默认浏览器打开作者小黑盒主页。</summary>
     private async void OpenXiaoheiheButton_Click(object sender, RoutedEventArgs e)
         => _ = await Windows.System.Launcher.LaunchUriAsync(new Uri(XiaoheiheUrl));
+
+    /// <summary>弹出赞赏码(与首启声明里的赞赏区同内容,独立小窗)。</summary>
+    private void ShowDonateButton_Click(object sender, RoutedEventArgs e)
+    {
+        var win = App.MainWin ?? (Window?)MainWindow.Instance;
+        if (win is null) return;
+        OpenSourceNotice.ShowDonateDialog(win);
+    }
 }

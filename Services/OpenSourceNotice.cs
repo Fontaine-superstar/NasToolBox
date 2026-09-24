@@ -62,6 +62,51 @@ public static class OpenSourceNotice
         }
     }
 
+    /// <summary>仅赞赏码小窗:「关于」页「赞赏」按钮用。</summary>
+    public static async void ShowDonateDialog(Window owner)
+    {
+        try
+        {
+            var xamlRoot = owner.Content?.XamlRoot;
+            if (xamlRoot is null) return;
+
+            var dialog = new ContentDialog
+            {
+                XamlRoot = xamlRoot,
+                Title = "赞赏开发者",
+                Content = BuildDonatePanel(),
+                PrimaryButtonText = "关闭",
+                DefaultButton = ContentDialogButton.Primary,
+            };
+            await dialog.ShowAsync();
+        }
+        catch
+        {
+            // 弹窗失败不影响页面
+        }
+    }
+
+    /// <summary>赞赏码区块(声明弹窗与独立赞赏小窗共用)。</summary>
+    private static StackPanel BuildDonatePanel()
+    {
+        var donateGroup = new StackPanel { Spacing = 6 };
+        donateGroup.Children.Add(new Image
+        {
+            Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(
+                new Uri("ms-appx:///Assets/Images/DonateQR.jpg")),
+            Width = 200,
+            HorizontalAlignment = HorizontalAlignment.Center,
+        });
+        donateGroup.Children.Add(new TextBlock
+        {
+            Text = "微信扫码,请作者喝杯咖啡",
+            FontSize = 12,
+            Opacity = 0.7,
+            TextWrapping = TextWrapping.Wrap,
+        });
+        return donateGroup;
+    }
+
     /// <summary>构建并弹出声明对话框;firstLaunch 决定按钮文案与「退出程序」行为。</summary>
     private static async Task<ContentDialogResult> ShowDialogCore(XamlRoot xamlRoot, bool firstLaunch)
     {
@@ -85,26 +130,12 @@ public static class OpenSourceNotice
         });
 
         // 赞赏码:直接平铺展示
-        var donateGroup = new StackPanel { Spacing = 6 };
-        donateGroup.Children.Add(new TextBlock
+        var donateGroup = BuildDonatePanel();
+        donateGroup.Children.Insert(0, new TextBlock
         {
             Text = "赞赏开发者",
             FontSize = 13,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-        });
-        donateGroup.Children.Add(new Image
-        {
-            Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(
-                new Uri("ms-appx:///Assets/Images/DonateQR.jpg")),
-            Width = 200,
-            HorizontalAlignment = HorizontalAlignment.Center,
-        });
-        donateGroup.Children.Add(new TextBlock
-        {
-            Text = "微信扫码,请作者喝杯咖啡",
-            FontSize = 12,
-            Opacity = 0.7,
-            TextWrapping = TextWrapping.Wrap,
         });
         panel.Children.Add(donateGroup);
 

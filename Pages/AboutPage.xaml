@@ -99,6 +99,33 @@
                             VerticalAlignment="Center" Click="OpenXiaoheiheButton_Click" />
                 </Grid>
             </Border>
+
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    CornerRadius="8" Padding="16,12" Margin="0,6,0,0">
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="40" Height="40" CornerRadius="20"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                        <Path Data="M7 9.5C7 8.12 8.12 7 9.5 7S12 8.12 12 9.5 10.88 12 9.5 12 7 10.88 7 9.5zm9.5 2.5c1.38 0 2.5-1.12 2.5-2.5S17.88 7 16.5 7 14 8.12 14 9.5s1.12 2.5 2.5 2.5zM7 15.5c0-.17 0-.33.01-.5C5.4 14.99 3.35 15.68 2 17v3h5v-4.5zM9.5 15c-1.61 0-4.9 1.03-6 3v2h12v-2c-1.1-1.97-4.39-3-6-3zm8.99-.01c-.34 0-.67.03-1 .07C18.4 15.85 19 17.08 19 18.5V20h3v-2c0-1.5-2.04-3.01-3.51-3.01zm-1.26 1.87c-.75.24-1.44.6-2.06 1.06-.29.21-.51.53-.63.9-.01.03-.02.06-.03.08-.04.13-.06.26-.06.4V20h5.99v-1.5c0-1.23-1.51-2.33-3.21-2.64zM11.5 14c-2.33 0-7 1.17-7 3.5V19h14v-1.5c0-2.33-4.67-3.5-7-3.5z"
+                              Fill="{ThemeResource TextFillColorPrimaryBrush}"
+                              Width="20" Height="20" Stretch="Uniform"
+                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Text="赞赏开发者" FontWeight="SemiBold" />
+                        <TextBlock Text="完全自愿,不影响任何功能"
+                                   FontSize="12" Opacity="0.65" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <Button Grid.Column="2" Content="赞赏"
+                            Style="{StaticResource AccentButtonStyle}"
+                            VerticalAlignment="Center" Click="ShowDonateButton_Click" />
+                </Grid>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </Page>
