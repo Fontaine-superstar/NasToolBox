@@ -32,7 +32,12 @@ public static class NasDeviceStore
                     JsonSerializer.Deserialize<List<NasDevice>>(File.ReadAllText(FilePath))
                     ?? new List<NasDevice>());
                 // 旧「Web 管理地址」→ Web 管理端口:迁移后旧字段清空,保存时不再落盘
-                foreach (var d in devices) d.MigrateLegacyWeb();
+                // 旧「sudo 逐条提权」→ root 会话:迁移后旧字段清空,保存时不再落盘
+                foreach (var d in devices)
+                {
+                    d.MigrateLegacyWeb();
+                    d.MigrateLegacyPrivilege();
+                }
                 return devices;
             }
         }

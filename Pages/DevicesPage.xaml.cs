@@ -184,8 +184,8 @@ public sealed partial class DevicesPage : Page
         SshUserBox.Text = row.Device.SshUser;
         SshAuthBox.SelectedIndex = row.Device.SshAuth == SshAuthKind.PrivateKey ? 1 : 0;
         SshKeyPathBox.Text = row.Device.SshKeyPath;
-        // RootLogin → root 会话;UseSudo → sudo 提权;其余普通用户
-        PrivilegeModeBox.SelectedIndex = row.Device.RootLogin ? 2 : row.Device.UseSudo ? 1 : 0;
+        // RootLogin → root 会话;其余普通用户
+        PrivilegeModeBox.SelectedIndex = row.Device.RootLogin ? 1 : 0;
         SshTimeoutBox.Value = row.Device.EffectiveTimeoutSec;
 
         // 口令类字段一律不回显,留空表示保持原值
@@ -213,7 +213,7 @@ public sealed partial class DevicesPage : Page
         SshAuthBox.SelectedIndex = 0;
         SshKeyPathBox.Text = string.Empty;
         // 新增设备默认 root 会话:NAS 管理命令(smartctl / docker 等)大多需要提权
-        PrivilegeModeBox.SelectedIndex = 2;
+        PrivilegeModeBox.SelectedIndex = 1;
         SshTimeoutBox.Value = 20;
 
         SshPassBox.Password = string.Empty;
@@ -254,17 +254,17 @@ public sealed partial class DevicesPage : Page
         SshPassBox.Visibility = isKey ? Visibility.Collapsed : Visibility.Visible;
         KeyPanel.Visibility = isKey ? Visibility.Visible : Visibility.Collapsed;
 
-        // 权限模式:0 普通 / 1 sudo / 2 root;后两者才需要 sudo 密码
+        // 权限模式:0 普通 / 1 root 会话;root 会话需要 sudo 密码
         var mode = PrivilegeModeBox.SelectedIndex;
-        var needSudo = mode is 1 or 2;
+        var needSudo = mode == 1;
         SudoPassBox.Visibility = needSudo ? Visibility.Visible : Visibility.Collapsed;
 
-        // 告诉用户留空的真实后果:已保存 → 保持不变;未保存 → 免密 sudo
+        // 告诉用户留空的真实后果:已保存 → 保持不变;未保存 → 需要 NAS 上免密 sudo
         var savedSudo = _editing is not null && _editing.Device.SudoPassEnc.Length > 0;
         SudoPassBox.Description = needSudo
             ? savedSudo
                 ? "已保存 sudo 密码,留空保持不变"
-                : "未保存;留空将在 NAS 上尝试免密 sudo(sudo -n)"
+                : "未保存;留空则要求 NAS 上已为该账号配置免密 sudo"
             : string.Empty;
 
         // 直接以 root 登录时提权没有意义,就地提醒避免误配
@@ -465,7 +465,7 @@ public sealed partial class DevicesPage : Page
         }
 
         var installable = report.Installable;
-        var canElevate = device.UseSudo || device.RootLogin || report.IsRoot;
+        var canElevate = device.RootLogin || report.IsRoot;
 
         if (report.Manager == PkgManager.None || installable.Count == 0)
         {
@@ -474,7 +474,7 @@ public sealed partial class DevicesPage : Page
         else if (!canElevate)
         {
             panel.Children.Add(PlainText(
-                "当前权限模式无法自动安装,请在「权限模式」里勾选 sudo 提权或 root 登录后重新测试。"));
+                "当前权限模式无法自动安装,请在「权限模式」里选择 root 会话后重新测试。"));
         }
         else
         {
@@ -639,7 +639,7 @@ public sealed partial class DevicesPage : Page
     private NasDevice BuildDeviceFromForm(int port, int webPort, int timeout)
     {
         var kind = SshAuthBox.SelectedIndex == 1 ? SshAuthKind.PrivateKey : SshAuthKind.Password;
-        var mode = PrivilegeModeBox.SelectedIndex; // 0 普通 / 1 sudo / 2 root
+        var mode = PrivilegeModeBox.SelectedIndex; // 0 普通 / 1 root 会话
         var saved = _editing?.Device;
 
         // 编辑时输入框为空 = 不修改,测试要用已保存的那份
@@ -662,8 +662,7 @@ public sealed partial class DevicesPage : Page
             SshPassEnc = pass.Length > 0 ? SecretProtector.Protect(pass) : string.Empty,
             SshKeyPath = kind == SshAuthKind.PrivateKey ? SshKeyPathBox.Text.Trim() : string.Empty,
             SshKeyPassEnc = keyPass.Length > 0 ? SecretProtector.Protect(keyPass) : string.Empty,
-            UseSudo = mode is 1 or 2,
-            RootLogin = mode == 2,
+            RootLogin = mode == 1,
             SudoPassEnc = sudoPass.Length > 0 ? SecretProtector.Protect(sudoPass) : string.Empty,
             SshTimeoutSec = timeout,
         };
@@ -687,9 +686,8 @@ public sealed partial class DevicesPage : Page
 
         var kind = SshAuthBox.SelectedIndex == 1 ? SshAuthKind.PrivateKey : SshAuthKind.Password;
         var keyPath = SshKeyPathBox.Text.Trim();
-        var mode = PrivilegeModeBox.SelectedIndex; // 0 普通 / 1 sudo / 2 root
-        var useSudo = mode is 1 or 2;
-        var rootLogin = mode == 2;
+        var mode = PrivilegeModeBox.SelectedIndex; // 0 普通 / 1 root 会话
+        var rootLogin = mode == 1;
         var clearSecrets = ClearPassBox.IsChecked == true;
 
         if (_editing is null)
@@ -712,7 +710,6 @@ public sealed partial class DevicesPage : Page
                 SshKeyPassEnc = kind == SshAuthKind.PrivateKey && SshKeyPassBox.Password.Length > 0
                     ? SecretProtector.Protect(SshKeyPassBox.Password)
                     : string.Empty,
-                UseSudo = useSudo,
                 RootLogin = rootLogin,
                 SudoPassEnc = SudoPassBox.Password.Length > 0
                     ? SecretProtector.Protect(SudoPassBox.Password)
@@ -733,7 +730,6 @@ public sealed partial class DevicesPage : Page
             d.SshUser = SshUserBox.Text.Trim();
             d.SshAuth = kind;
             d.SshKeyPath = kind == SshAuthKind.PrivateKey ? keyPath : string.Empty;
-            d.UseSudo = useSudo;
             d.RootLogin = rootLogin;
             d.SshTimeoutSec = timeoutSec;
 

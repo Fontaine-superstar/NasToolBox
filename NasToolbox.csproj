@@ -56,6 +56,10 @@
   <ItemGroup>
     <Content Include="img\**\*" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <Content Include="Assets\Terminal\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Remove="photo\img.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="photo\" />
   </ItemGroup>
 
   <!--

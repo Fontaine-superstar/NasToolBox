@@ -5,7 +5,7 @@ namespace NasToolbox.Services.Ssh;
 /// </summary>
 public sealed class SshCommandResult
 {
-    /// <summary>实际下发到远端的完整命令(可能已套 sudo)。</summary>
+    /// <summary>实际下发到远端的完整命令(root 会话下会在已提权的 shell 中执行)。</summary>
     public string Command { get; init; } = "";
 
     /// <summary>标准输出。</summary>

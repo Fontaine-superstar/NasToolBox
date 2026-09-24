@@ -8,7 +8,7 @@ namespace NasToolbox.Services;
 /// <summary>
 /// 通过 SSH 管理远端 NAS 上的 Docker:容器(列出 / 启停 / 删除 / 日志 / 部署新容器),
 /// 以及概览、本地镜像、网络、Compose 项目管理。
-/// 需要 root 的命令由 <see cref="SshService"/> 按设备配置自动决定是否加 sudo。
+/// 需要 root 的命令依赖设备配置的「root 会话」权限模式(见 <see cref="SshService"/>)。
 /// </summary>
 public static class DockerService
 {
@@ -18,7 +18,7 @@ public static class DockerService
     /// <summary>列出全部容器(含已停止的)。</summary>
     public static async Task<List<DockerContainer>> ListAsync(NasDevice device, CancellationToken ct = default)
     {
-        var r = await SshService.RunAsync(device, $"docker ps -a --format '{PsFormat}'", 25000, null, ct)
+        var r = await SshService.RunAsync(device, $"docker ps -a --format '{PsFormat}'", 25000, ct)
             .ConfigureAwait(false);
 
         if (r.ErrorMessage is not null) throw new InvalidOperationException(r.ErrorMessage);
@@ -65,7 +65,7 @@ public static class DockerService
 
         var timeout = action is DockerAction.Stop or DockerAction.Remove ? 60000 : 40000;
         var r = await SshService.RunAsync(
-            device, $"docker {verb} {Quote(container)}", timeout, null, ct).ConfigureAwait(false);
+            device, $"docker {verb} {Quote(container)}", timeout, ct).ConfigureAwait(false);
 
         if (r.ErrorMessage is not null) throw new InvalidOperationException(r.ErrorMessage);
         if (r.TimedOut) throw new InvalidOperationException($"docker {verb} 超时({timeout / 1000} 秒)。");
@@ -80,7 +80,7 @@ public static class DockerService
         NasDevice device, string container, int tail = 300, CancellationToken ct = default)
     {
         var r = await SshService.RunAsync(
-            device, $"docker logs --tail {tail} {Quote(container)}", 30000, null, ct).ConfigureAwait(false);
+            device, $"docker logs --tail {tail} {Quote(container)}", 30000, ct).ConfigureAwait(false);
 
         if (r.ErrorMessage is not null) throw new InvalidOperationException(r.ErrorMessage);
         if (r.TimedOut) throw new InvalidOperationException("拉取日志超时(30 秒)。");
@@ -120,7 +120,7 @@ public static class DockerService
         if (spec.Pull)
         {
             // 拉取大镜像可能要几分钟,超时放宽到 10 分钟
-            var pull = await SshService.RunAsync(device, $"docker pull {image}", 600000, null, ct);
+            var pull = await SshService.RunAsync(device, $"docker pull {image}", 600000, ct);
             if (!pull.Success) throw new InvalidOperationException($"拉取镜像失败:\r\n{Truncate(pull.Output)}");
         }
 
@@ -131,7 +131,7 @@ public static class DockerService
             cmd.Append(" -p ").Append(host).Append(':').Append(container);
         cmd.Append(' ').Append(image);
 
-        var run = await SshService.RunAsync(device, cmd.ToString(), 60000, null, ct);
+        var run = await SshService.RunAsync(device, cmd.ToString(), 60000, ct);
         if (!run.Success) throw new InvalidOperationException(Truncate(run.Output));
 
         return (run.Stdout ?? "").Trim();
@@ -147,13 +147,13 @@ public static class DockerService
     {
         var info = await SshService.RunAsync(device,
             "docker info --format '{{.ServerVersion}}|{{.Containers}}|{{.ContainersRunning}}|{{.ContainersStopped}}|{{.Images}}'",
-            30000, null, ct);
+            30000, ct);
         if (!info.Success) throw new InvalidOperationException(Explain(info.Output));
 
         var p = (info.Stdout ?? "").Replace("\r", "").Trim().Split('|');
         string At(int i) => i < p.Length ? p[i].Trim() : "";
 
-        var nets = await SshService.RunAsync(device, "docker network ls --format '{{.Name}}' | wc -l", 20000, null, ct);
+        var nets = await SshService.RunAsync(device, "docker network ls --format '{{.Name}}' | wc -l", 20000, ct);
         var netsCount = int.TryParse((nets.Stdout ?? "").Trim(), out var n) ? n : 0;
 
         return (At(0).Length > 0 ? At(0) : "—",
@@ -167,7 +167,7 @@ public static class DockerService
     {
         var r = await SshService.RunAsync(device,
             "docker images --format '{{.Repository}}:{{.Tag}}\\t{{.ID}}\\t{{.Size}}\\t{{.CreatedSince}}'",
-            30000, null, ct);
+            30000, ct);
         if (!r.Success) throw new InvalidOperationException(Explain(r.Output));
 
         var list = new List<DockerImage>();
@@ -190,14 +190,14 @@ public static class DockerService
     /// <summary>删除镜像(按 ID)。</summary>
     public static async Task RemoveImageAsync(NasDevice device, string imageId, CancellationToken ct = default)
     {
-        var r = await SshService.RunAsync(device, $"docker rmi {imageId}", 120000, null, ct);
+        var r = await SshService.RunAsync(device, $"docker rmi {imageId}", 120000, ct);
         if (!r.Success) throw new InvalidOperationException(Explain(Truncate(r.Output)));
     }
 
     /// <summary>清理悬空镜像,返回 docker 输出摘要。</summary>
     public static async Task<string> PruneImagesAsync(NasDevice device, CancellationToken ct = default)
     {
-        var r = await SshService.RunAsync(device, "docker image prune -f", 180000, null, ct);
+        var r = await SshService.RunAsync(device, "docker image prune -f", 180000, ct);
         if (!r.Success) throw new InvalidOperationException(Explain(Truncate(r.Output)));
         return Truncate(r.Output);
     }
@@ -206,7 +206,7 @@ public static class DockerService
     public static async Task<List<DockerNetwork>> ListNetworksAsync(NasDevice device, CancellationToken ct = default)
     {
         var r = await SshService.RunAsync(device,
-            "docker network ls --format '{{.Name}}\\t{{.Driver}}\\t{{.Scope}}'", 20000, null, ct);
+            "docker network ls --format '{{.Name}}\\t{{.Driver}}\\t{{.Scope}}'", 20000, ct);
         if (!r.Success) throw new InvalidOperationException(Explain(r.Output));
 
         var list = new List<DockerNetwork>();
@@ -228,16 +228,16 @@ public static class DockerService
     /// <summary>删除用户自定义网络(内置网络 docker 会拒绝)。</summary>
     public static async Task RemoveNetworkAsync(NasDevice device, string name, CancellationToken ct = default)
     {
-        var r = await SshService.RunAsync(device, $"docker network rm {SshService.ShellQuote(name)}", 60000, null, ct);
+        var r = await SshService.RunAsync(device, $"docker network rm {SshService.ShellQuote(name)}", 60000, ct);
         if (!r.Success) throw new InvalidOperationException(Explain(Truncate(r.Output)));
     }
 
     /// <summary>探测 compose 命令前缀:v2 插件(docker compose)优先,回退 docker-compose。</summary>
     private static async Task<string> ComposePrefixAsync(NasDevice device, CancellationToken ct)
     {
-        var v2 = await SshService.RunAsync(device, "docker compose version", 20000, null, ct);
+        var v2 = await SshService.RunAsync(device, "docker compose version", 20000, ct);
         if (v2.Success) return "docker compose";
-        var v1 = await SshService.RunAsync(device, "docker-compose version", 20000, null, ct);
+        var v1 = await SshService.RunAsync(device, "docker-compose version", 20000, ct);
         if (v1.Success) return "docker-compose";
         throw new InvalidOperationException("NAS 上未检测到 Docker Compose(docker compose / docker-compose)。");
     }
@@ -246,7 +246,7 @@ public static class DockerService
     public static async Task<List<DockerComposeProject>> ListComposeAsync(NasDevice device, CancellationToken ct = default)
     {
         var prefix = await ComposePrefixAsync(device, ct);
-        var r = await SshService.RunAsync(device, $"{prefix} ls -a --format json", 30000, null, ct);
+        var r = await SshService.RunAsync(device, $"{prefix} ls -a --format json", 30000, ct);
         if (!r.Success) throw new InvalidOperationException(Explain(Truncate(r.Output)));
 
         var text = (r.Stdout ?? "").Trim();
@@ -290,7 +290,7 @@ public static class DockerService
     {
         var prefix = await ComposePrefixAsync(device, ct);
         var timeout = action == "down" ? 300000 : 120000;
-        var r = await SshService.RunAsync(device, $"{prefix} -p {SshService.ShellQuote(project)} {action}", timeout, null, ct);
+        var r = await SshService.RunAsync(device, $"{prefix} -p {SshService.ShellQuote(project)} {action}", timeout, ct);
         if (!r.Success) throw new InvalidOperationException(Explain(Truncate(r.Output)));
     }
 
@@ -310,7 +310,7 @@ public static class DockerService
         }
 
         var prefix = await ComposePrefixAsync(device, ct);
-        var r = await SshService.RunAsync(device, $"{prefix} -f {SshService.ShellQuote(file)} up -d", 600000, null, ct);
+        var r = await SshService.RunAsync(device, $"{prefix} -f {SshService.ShellQuote(file)} up -d", 600000, ct);
         if (!r.Success) throw new InvalidOperationException(Explain(Truncate(r.Output)));
         return file;
     }
@@ -352,14 +352,14 @@ public static class DockerService
         try
         {
             var load = await SshService.RunAsync(device,
-                $"docker load -i {SshService.ShellQuote(remote)}", 600000, null, ct);
+                $"docker load -i {SshService.ShellQuote(remote)}", 600000, ct);
             if (!load.Success) throw new InvalidOperationException(Explain(Truncate(load.Output)));
             return Truncate(load.Output);
         }
         finally
         {
             // 导入完清理远端临时文件(失败无碍)
-            _ = SshService.RunAsync(device, $"rm -f {SshService.ShellQuote(remote)}", 15000, null, ct);
+            _ = SshService.RunAsync(device, $"rm -f {SshService.ShellQuote(remote)}", 15000, ct);
         }
     }
 
@@ -374,7 +374,7 @@ public static class DockerService
             return $"远端没有 docker 命令,可能未安装或不在 PATH 中。\r\n原始输出:{s}";
 
         if (s.Contains("permission denied", StringComparison.OrdinalIgnoreCase))
-            return $"当前用户无权访问 Docker 守护进程。请在设备「编辑 → 权限与高级」里选择 sudo 提权或 root 会话,或把该用户加入 docker 组。\r\n原始输出:{s}";
+            return $"当前用户无权访问 Docker 守护进程。请在设备「编辑 → 权限与高级」里选择 root 会话,或把该用户加入 docker 组。\r\n原始输出:{s}";
 
         if (s.Contains("Cannot connect to the Docker daemon", StringComparison.OrdinalIgnoreCase))
             return $"Docker 守护进程未运行或无法连接。\r\n原始输出:{s}";

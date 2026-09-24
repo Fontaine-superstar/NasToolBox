@@ -51,7 +51,7 @@ internal sealed class SshRootShell : IDisposable
         {
             session.Dispose();
             throw new InvalidOperationException(
-                "该账号没有 sudo 权限(not in the sudoers)。请换用有 sudo 权限的账号,或改选其他权限模式。");
+                "该账号没有 sudo 权限(not in the sudoers)。请换用有 sudo 权限的账号,或改用 root 账号直接登录。");
         }
 
         if (kind == PromptKind.Password)

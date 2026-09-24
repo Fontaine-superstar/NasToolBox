@@ -7,7 +7,7 @@ using Renci.SshNet;
 namespace NasToolbox.Services.Ssh;
 
 /// <summary>
-/// SSH 远程执行入口:连接复用、真超时中断、sudo 提权、连接诊断与设备识别。
+/// SSH 远程执行入口:连接复用、真超时中断、root 会话提权、连接诊断与设备识别。
 /// 连接建立失败抛 <see cref="SshConnectException"/>(带结构化原因);
 /// 命令执行期的问题以 <see cref="SshCommandResult.ErrorMessage"/> / TimedOut 返回,不抛异常。
 /// </summary>
@@ -39,16 +39,15 @@ public static class SshService
     private const int TcpProbeTimeoutMs = 5000;
 
     /// <summary>
-    /// 执行一条命令。timeoutMs 为 0 时使用设备配置的超时;sudo 为 null 时跟随设备配置。
+    /// 执行一条命令。timeoutMs 为 0 时使用设备配置的超时。
     /// </summary>
     public static async Task<SshCommandResult> RunAsync(
         NasDevice device,
         string command,
         int timeoutMs = 0,
-        bool? sudo = null,
         CancellationToken ct = default)
     {
-        var results = await RunCoreAsync(device, new[] { command }, timeoutMs, sudo, ct).ConfigureAwait(false);
+        var results = await RunCoreAsync(device, new[] { command }, timeoutMs, ct).ConfigureAwait(false);
         return results.Count > 0
             ? results[0]
             : new SshCommandResult { Command = command, ErrorMessage = "命令为空。" };
@@ -61,9 +60,8 @@ public static class SshService
         NasDevice device,
         IEnumerable<string> commands,
         int timeoutMs = 0,
-        bool? sudo = null,
         CancellationToken ct = default)
-        => RunCoreAsync(device, commands, timeoutMs, sudo, ct);
+        => RunCoreAsync(device, commands, timeoutMs, ct);
 
     /// <summary>
     /// 连接诊断:先 TCP 预检(区分域名解析失败 / 端口未开放 / 超时),再做 SSH 握手与认证。
@@ -177,7 +175,7 @@ public static class SshService
             Summary = $"连接成功{(version.Length > 0 ? " · " + version : "")}",
             Hint = device.RootLogin
                 ? "已启用 root 登录,命令会在 sudo -i 会话中执行(sudo 密码会在连接时自动输入一次)。"
-                : device.UseSudo ? "已配置 sudo 提权,需要 root 的命令会自动加 sudo。" : "",
+                : "",
             ServerVersion = version,
             HostKeyName = outcome.HostKeyName,
             Fingerprint = outcome.Fingerprint,
@@ -191,7 +189,7 @@ public static class SshService
     /// <summary>识别远端系统类型(群晖 / 威联通 / UnRAID / TrueNAS / 通用 Linux)。</summary>
     public static async Task<NasOsInfo> DetectAsync(NasDevice device, CancellationToken ct = default)
     {
-        var result = await RunAsync(device, DetectScript, 15000, sudo: false, ct: ct).ConfigureAwait(false);
+        var result = await RunAsync(device, DetectScript, 15000, ct: ct).ConfigureAwait(false);
         var text = result.ErrorMessage is null ? result.Stdout : "";
         return ParseOsInfo(text);
     }
@@ -239,7 +237,6 @@ public static class SshService
         NasDevice device,
         IEnumerable<string> commands,
         int timeoutMs,
-        bool? sudo,
         CancellationToken ct)
     {
         var list = commands.Where(c => !string.IsNullOrWhiteSpace(c)).ToList();
@@ -254,8 +251,6 @@ public static class SshService
         }
 
         var perCommandMs = timeoutMs > 0 ? timeoutMs : device.EffectiveTimeoutSec * 1000;
-        // root 会话里已经是 root,无需再逐条加 sudo
-        var useSudo = (sudo ?? device.UseSudo) && !device.RootLogin;
 
         // 等待「连接空闲」的上限放宽一点:单条超时 + 20 秒握手余量
         var waitMs = perCommandMs + 20000;
@@ -281,7 +276,7 @@ public static class SshService
                 {
                     lease.Abandon();
                     var reason = ex is TimeoutException
-                        ? $"sudo -i 提权超时:{ex.Message}\r\n可先在 NAS 上手动执行 sudo -i 验证;若该环境不支持交互提权,请改选「sudo 提权」权限模式。"
+                        ? $"sudo -i 提权超时:{ex.Message}\r\n可先在 NAS 上手动执行 sudo -i 验证;或在 NAS 上为该账号配置免密 sudo 后重试。"
                         : $"sudo -i 提权失败:{ex.Message}";
                     FillRemaining(results, list, reason);
                     return results;
@@ -301,7 +296,7 @@ public static class SshService
                     return results;
                 }
 
-                results.Add(await ExecuteOneAsync(lease, device, raw, useSudo, perCommandMs, ct)
+                results.Add(await ExecuteOneAsync(lease, raw, perCommandMs, ct)
                     .ConfigureAwait(false));
             }
         }
@@ -338,8 +333,8 @@ public static class SshService
 
         try
         {
-            var r = await ExecuteOneAsync(lease, device, "hostname", useSudo: false,
-                Math.Min(timeoutMs, 5000), ct).ConfigureAwait(false);
+            var r = await ExecuteOneAsync(lease, "hostname", Math.Min(timeoutMs, 5000), ct)
+                .ConfigureAwait(false);
             var name = r.ErrorMessage is null ? r.Stdout.Trim() : "";
             if (name.Length == 0 || name.Contains('\n') || name.Contains(' ') || name.Length > 128) return;
 
@@ -355,13 +350,11 @@ public static class SshService
 
     private static async Task<SshCommandResult> ExecuteOneAsync(
         SshConnectionCache.Lease lease,
-        NasDevice device,
         string rawCommand,
-        bool useSudo,
         int timeoutMs,
         CancellationToken ct)
     {
-        var full = BuildCommand(device, rawCommand, useSudo);
+        var full = (rawCommand ?? "").Trim();
         var sw = Stopwatch.StartNew();
 
         // root 会话:直接在这个已提权的 shell 里跑,不需要 sudo 包装
@@ -457,19 +450,6 @@ public static class SshService
 
     private static SshCommandResult Broken(string command, string message, TimeSpan elapsed) =>
         new() { Command = command, ErrorMessage = message, Elapsed = elapsed };
-
-    /// <summary>按需套上 sudo;无 sudo 密码时使用免密 sudo(sudo -n)。</summary>
-    private static string BuildCommand(NasDevice d, string command, bool useSudo)
-    {
-        var cmd = (command ?? "").Trim();
-        if (!useSudo || cmd.Length == 0) return cmd;
-
-        var inner = ShellQuote(cmd);
-        var sudoPass = SecretProtector.Unprotect(d.SudoPassEnc);
-        return sudoPass.Length == 0
-            ? $"sudo -n sh -c {inner}"
-            : $"printf '%s\\n' {ShellQuote(sudoPass)} | sudo -S -p '' sh -c {inner}";
-    }
 
     /// <summary>单引号包裹,内部单引号转义,避免命令与密码被 shell 二次解析。</summary>
     internal static string ShellQuote(string s) => "'" + (s ?? "").Replace("'", "'\\''") + "'";

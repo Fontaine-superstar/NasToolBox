@@ -50,7 +50,7 @@ public static class DependencyService
     /// <summary>自检:只做只读探测,不会改动 NAS。</summary>
     public static async Task<DependencyReport> ProbeAsync(NasDevice device, CancellationToken ct = default)
     {
-        var r = await SshService.RunAsync(device, ProbeScript, 30000, sudo: false, ct).ConfigureAwait(false);
+        var r = await SshService.RunAsync(device, ProbeScript, 30000, ct).ConfigureAwait(false);
         if (r.ErrorMessage is not null || r.TimedOut)
         {
             return new DependencyReport
@@ -82,7 +82,7 @@ public static class DependencyService
         };
     }
 
-    /// <summary>安装缺失项(需设备已配置 sudo 提权或 root 登录)。返回远端执行结果。</summary>
+    /// <summary>安装缺失项(需设备已配置 root 会话,或登录账号本身是 root)。返回远端执行结果。</summary>
     public static async Task<SshCommandResult> InstallAsync(
         NasDevice device,
         PkgManager manager,
@@ -104,7 +104,7 @@ public static class DependencyService
         }
 
         var cmd = BuildInstallCommand(manager, pkgs);
-        return await SshService.RunAsync(device, cmd, InstallTimeoutMs, sudo: true, ct).ConfigureAwait(false);
+        return await SshService.RunAsync(device, cmd, InstallTimeoutMs, ct).ConfigureAwait(false);
     }
 
     /// <summary>无包管理器时给用户的手动安装提示(按缺失项拼发行版通用命令)。</summary>

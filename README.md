@@ -8,7 +8,7 @@
 
 [快速开始](#快速开始) · [功能总览](#功能总览) · [NAS 端依赖](#nas-端依赖) · [使用须知](#使用须知) · [问题反馈](https://github.com/Fontaine-superstar/NasToolBox/issues)
 
-> [!NOTE]
+> [!注意]
 > 本工具的操作功能都基于SSH来实现，请确保NAS端安装并开启了SSH功能
 
 * * *
@@ -16,14 +16,8 @@
 ## 目录
 
 - 功能总览
-- NAS 端依赖
-- 快速开始
-- 系统兼容性
-- 目录结构
-- 数据存放
-- 隐私与安全
-- 使用须知
-- 许可证
+- 功能详细
+
 
 * * *
 
@@ -46,19 +40,19 @@
 <details>
 <summary>点击展开各页面详细说明</summary>
 
+### 首页
+   ![屏幕截图 2026-09-24 191804.png](photo/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-09-24%20191804.png)
+    显示本机信息与已添加的NAS信息
 ### 设备管理
-
-- 设备字段:显示名称、主机地址、MAC、Web 端口、SSH 端口 / 账号 / 认证方式(密码或私钥)、备注
-- 权限模式:普通用户 / sudo 提权 / root 登录,决定采集类命令能否拿到完整信息
-- 行内操作:编辑、删除、**环境自检**、Ping、打开 Web、WOL 唤醒、打开 SMB
+![屏幕截图 2026-09-24 191816.png](photo/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-09-24%20191816.png)
+- 设备字段:显示名称、主机地址、MAC、Web 端口、SSH 端口 / 账号 / 权限模式、备注
+- 权限模式:普通用户 / root 会话,决定采集类命令能否拿到完整信息
+- 行内操作:编辑、删除、环境自检、Ping、打开 Web、WOL 唤醒、打开 SMB
 - 保存时可选「测试连接」,成功后自动触发一次 NAS 端依赖自检
 
 ### NAS 状态
+![屏幕截图 2026-09-24 191820.png](photo/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-09-24%20191820.png)
 
-- 一条 SSH 命令组批量取回所有指标,不是逐条往返,采集快
-- 硬盘卡:`lsblk` 拿容量 / 类型(SSD·HDD)/ 接口 / 型号,`smartctl -H` 拿健康自评;点击任一硬盘弹出 SMART 详情(温度、通电时间、属性表、厂商告警)
-- 内存行显示内存条型号(需 root;虚拟机无 DMI 时显示「—」属正常)
-- 公网 IP 通过 NAS 侧 curl 查询,避免拿到本机出口 IP
 
 采集由一条 SSH 命令组一次性下发,命令与采集内容对照如下:
 
@@ -116,7 +110,7 @@
 | 包 | 需求项目                                                           | 缺失影响           |
 |---|----------------------------------------------------------------|----------------|
 | `openssh-server` | 全部远程功能走 SSH                                                    | 全部不可用          |
-| `sudo` | 设备权限三态(sudo / root 登录)                                         | 只能普通用户,部分采集拿不到 |
+| `sudo` | root 会话模式建立提权会话                                          | 只能普通用户,部分采集拿不到 |
 | `iproute2` | `ip -o -4 addr`、`ip route`(网卡、IP、网关、速率)                        | 网络卡片全空         |
 | `util-linux` | `lsblk`(硬盘列表、容量、接口、型号)                                         | 硬盘卡片为空         |
 | `smartmontools` | `smartctl -H` / `-a`(健康自评 + SMART 详情)                          | 健康度「未知」,详情打不开  |
@@ -129,107 +123,7 @@
 | `docker-compose-plugin` | `docker compose version`(compose 项目列表)                         | compose 列表报错   |
 
 
-### 一键自检
 
-「设备管理」里点设备行的 **环境自检**(或编辑设备后点测试连接),程序会用单条 SSH 命令探测上述组件,列出缺失项及其影响;设备开了 sudo 提权或 root 登录时,可直接点按钮让程序装,装完自动复检。群晖 / UnRAID / TrueNAS 这类没有通用包管理器的系统,只提示不硬装。
-
-### 还需要两条配置
-
-```bash
-sudo smbpasswd -a 你的用户名       # 密码需与 SSH 登录密码一致,文件管理页复用 SSH 密码连 SMB
-sudo usermod -aG docker 你的用户名  # 否则 docker 命令无权限,重连 SSH 生效
-```
-
-防火墙放行 **445**(SMB)与你给测速容器映射的宿主端口。
-
-### 测速容器(唯一被代码写死的镜像)
-
-```bash
-docker run -d --name speedtest-x --restart unless-stopped -p 8081:80 badapple9/speedtest-x
-```
-
-容器名 `speedtest-x` 由 `SpeedtestService` 硬编码,部署后内网测速页会自动扫到它并解析端口映射。除此之外项目**不预置任何镜像模板**,Docker 页部署什么完全由你在界面里填。`img/` 目录可放离线镜像 tar(体积过大未纳入仓库),无外网时用 `docker load` 导入。
-
-* * *
-
-## 快速开始
-
-```powershell
-git clone https://github.com/Fontaine-superstar/NasToolBox.git
-cd NasToolBox
-dotnet run            # 非打包(Unpackaged)模式直接运行
-```
-
-构建便携版(自带 WinAppSDK 运行时,解压即用):
-
-```powershell
-dotnet publish -c Release -r win-x64 -o publish\x64
-# 同理 win-x86 / win-arm64
-```
-
-环境要求:
-
-- .NET 10 SDK(`winget install Microsoft.DotNet.SDK.10`)
-- Visual Studio 2022 17.14+ 或 Rider / VS Code(C# Dev Kit)
-- Windows 10 19041+ / Windows 11
-
-* * *
-
-## 系统兼容性
-
-Windows 10 19041 及更高版本与 Windows 11
-
-* * *
-
-## 目录结构
-
-```
-├── App.xaml(.cs) / MainWindow.xaml(.cs)   入口 + 标题栏/导航骨架
-├── Pages/                                 各功能页面(见功能总览)
-├── Models/                                数据模型(NasDevice / DiskInfo / FileEntry / DockerContainer / DependencyReport …)
-├── Services/
-│   ├── NasStatusService      NAS 状态批量采集(命令组一次 SSH 往返)
-│   ├── SmartService          SMART 详情采集与解析
-│   ├── DependencyService     NAS 端依赖自检与按发行版安装
-│   ├── DriveMapService       网络驱动器映射与断开(WNet)
-│   ├── Smb/                  SMB 会话(WNet)与 UNC 文件操作
-│   ├── Ssh/                  SSH 连接、命令执行、root 提权 shell、SFTP、终端会话
-│   ├── NetworkService        Ping / TCP 端口探测 / DNS / 本机网络信息
-│   ├── WakeOnLanService      魔术包(全局广播 + 子网定向广播)
-│   ├── SmbService            NetShareEnum 共享枚举(P/Invoke)
-│   └── NasDeviceStore / DeviceStatusStore / SecretProtector …
-├── Converters/Conv.cs        x:Bind 函数绑定辅助(字节格式化 / 端口状态 / 盘符等)
-├── Assets/Terminal/          xterm.js 前端终端(vendored,MIT)
-└── img/                      离线容器镜像 tar 放置目录
-```
-
-* * *
-
-## 数据存放
-
-- 设备台账:`%LocalAppData%\NasToolbox\devices.json`(首次保存设备时创建)
-- 设备状态缓存:`%LocalAppData%\NasToolbox\device_status.json`
-- SSH 主机指纹:`%LocalAppData%\NasToolbox\known_hosts.json`
-
-* * *
-
-## 隐私与安全
-
-- **SSH 密码**使用 Windows DPAPI(`SecretProtector`)加密存储,绑定当前用户与本机;把 `devices.json` 拷到别处无法解出。
-- SMB 会话与网络驱动器映射复用已保存的 SSH 账号密码,密码**只存在于内存**,不会写入磁盘、也不会作为命令行参数出现。
-- SSH 主机密钥按设备指纹校验,避免中间人风险。
-- 所有远程操作均需用户显式触发,程序不会在后台主动连接设备。
-
-* * *
-
-## 使用须知
-
-- **Wake-on-LAN**:需要 NAS 的 BIOS/UEFI 与网卡开启 WOL;部分路由器/AP 会拦截广播帧,已同时向 `255.255.255.255` 与各网卡子网定向广播地址发包以提高成功率。
-- **SMB**:文件管理复用设备的 SSH 账号密码,所以 NAS 上要用 `smbpasswd -a` 把同一用户加进 Samba 且**设成相同密码**;共享枚举依赖目标允许枚举,群晖等默认禁用匿名访问,提示「访问被拒绝」时先在资源管理器打开 `\\NAS的IP` 登录一次。
-- **硬盘 SMART** 需要目标 NAS 装有 `smartmontools` 且运行用户有检测权限(走设备配置的 root / sudo 提权通道);未安装时该盘显示「未知」,容量与型号不受影响。
-- **端口探测**只是 TCP 连通性测试,不代表服务一定正常。
-- **SSH**:群晖等 NAS 需先在管理后台开启 SSH;项目使用 SSH.NET 2026(新包 ID),老旧的 `Renci.SshNet` 已不支持现代算法,请勿降级。
-- `img/` 用于存放离线容器镜像包(如 speedtest-x),因体积过大未纳入仓库;分发前请确认镜像自身授权。
 
 * * *
 

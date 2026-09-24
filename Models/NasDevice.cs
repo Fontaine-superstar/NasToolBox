@@ -65,10 +65,16 @@ public sealed class NasDevice
     /// <summary>私钥文件自身的口令(DPAPI 加密后的 Base64);私钥未加密时可留空。</summary>
     public string SshKeyPassEnc { get; set; } = "";
 
-    /// <summary>命令是否经 sudo 提权执行(smartctl、docker 等常需 root)。</summary>
-    public bool UseSudo { get; set; }
+    /// <summary>
+    /// 旧版「sudo 逐条提权」模式的遗留字段:仅为兼容历史 devices.json 而保留,
+    /// 加载时经 <see cref="MigrateLegacyPrivilege"/> 迁移为 root 会话后清空,保存时不再写出。
+    /// </summary>
+    [System.Text.Json.Serialization.JsonInclude]
+    [System.Text.Json.Serialization.JsonIgnore(
+        Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool UseSudo { get; private set; }
 
-    /// <summary>sudo 密码(DPAPI 加密后的 Base64);留空则尝试免密 sudo(sudo -n)。</summary>
+    /// <summary>sudo 密码(DPAPI 加密后的 Base64);root 会话提权时使用,留空则需要 NAS 上配置免密 sudo。</summary>
     public string SudoPassEnc { get; set; } = "";
 
     /// <summary>以 root 方式连接:连接后执行 sudo -i(需密码时自动输入),之后命令都在 root 会话中执行。</summary>
@@ -110,6 +116,14 @@ public sealed class NasDevice
         Web = "";
     }
 
+    /// <summary>旧配置迁移:旧版「sudo 逐条提权」模式已移除,曾勾选 sudo 的设备升级为 root 会话,随后清空旧字段。</summary>
+    public void MigrateLegacyPrivilege()
+    {
+        if (UseSudo && !RootLogin)
+            RootLogin = true;
+        UseSudo = false;
+    }
+
     /// <summary>对应的 UNC 根路径(\\host)。</summary>
     public string Unc => @"\\" + Host.TrimStart('\\');
 
@@ -134,7 +148,6 @@ public sealed class NasDevice
             var parts = new List<string> { SshDisplay };
             if (SshAuth == SshAuthKind.PrivateKey) parts.Add("私钥");
             if (RootLogin) parts.Add("root 登录");
-            else if (UseSudo) parts.Add("sudo");
             return string.Join(" · ", parts);
         }
     }

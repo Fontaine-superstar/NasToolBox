@@ -221,7 +221,7 @@
                         <StackPanel Spacing="10">
                             <TextBlock Text="权限与高级" Style="{StaticResource SectionTitle}" />
 
-                            <!-- 三选一互斥模式,杜绝「root 会话 + 关闭 sudo」这类矛盾组合 -->
+                            <!-- 普通用户 / root 会话 二选一 -->
                             <RadioButtons x:Name="PrivilegeModeBox" Header="权限模式" MaxColumns="1"
                                           SelectionChanged="PrivilegeModeBox_SelectionChanged">
                                 <RadioButton>
@@ -229,13 +229,6 @@
                                         <TextBlock Text="普通用户" />
                                         <TextBlock Style="{StaticResource FieldHint}"
                                                    Text="以登录账号身份执行,适合读取类命令" />
-                                    </StackPanel>
-                                </RadioButton>
-                                <RadioButton>
-                                    <StackPanel Spacing="2">
-                                        <TextBlock Text="sudo 提权" />
-                                        <TextBlock Style="{StaticResource FieldHint}"
-                                                   Text="每条命令自动加 sudo;smartctl / docker 等命令常需 root" />
                                     </StackPanel>
                                 </RadioButton>
                                 <RadioButton>
@@ -248,7 +241,7 @@
                             </RadioButtons>
 
                             <PasswordBox x:Name="SudoPassBox" Header="sudo 密码"
-                                         Description="留空则在 NAS 上尝试免密 sudo(sudo -n)" />
+                                         Description="留空则要求 NAS 上已为该账号配置免密 sudo" />
                             <TextBlock x:Name="RootUserHint" Style="{StaticResource FieldHint}"
                                        Text="当前 SSH 用户已是 root,无需再提权。" Visibility="Collapsed" />
 

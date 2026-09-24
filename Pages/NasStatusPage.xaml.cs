@@ -10,7 +10,7 @@ namespace NasToolbox.Pages;
 /// <summary>
 /// NAS 状态:对选中设备做在线探测,并经 SSH 采集系统信息
 /// (系统 / 主机名 / 在线时长 / 负载 / CPU 核心 / 温度 / 内存 / 磁盘空间)。
-/// 指标随设备的权限模式自动提权(root 会话 / sudo);采集命令均为只读,无需特殊权限。
+/// 指标随设备的权限模式自动提权(root 会话);采集命令均为只读,无需特殊权限。
 /// </summary>
 public sealed partial class NasStatusPage : Page
 {

@@ -34,7 +34,7 @@ public static class SpeedtestService
     /// <summary>启动已部署但未运行的容器。</summary>
     public static async Task StartAsync(NasDevice device, string containerName, CancellationToken ct = default)
     {
-        var r = await SshService.RunAsync(device, $"docker start {SshService.ShellQuote(containerName)}", 60000, null, ct)
+        var r = await SshService.RunAsync(device, $"docker start {SshService.ShellQuote(containerName)}", 60000, ct)
             .ConfigureAwait(false);
         if (!r.Success) throw new InvalidOperationException(DockerService.Explain(r.Output));
     }
@@ -62,7 +62,7 @@ public static class SpeedtestService
         if (port > 0) return port;
 
         var r = await SshService.RunAsync(device,
-            $"docker port {SshService.ShellQuote(container.Name)} 80", 15000, null, ct).ConfigureAwait(false);
+            $"docker port {SshService.ShellQuote(container.Name)} 80", 15000, ct).ConfigureAwait(false);
         if (!r.Success) return 0;
 
         // 输出形如「80/tcp -> 0.0.0.0:8800」「80/tcp -> [::]:8800」
