@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.UI.Xaml;
@@ -204,10 +205,23 @@ public sealed partial class NetworkToolsPage : Page
             var container = await SpeedtestService.FindAsync(device);
             if (container is null)
             {
-                SpeedStatus.Text =
-                    "未找到 speedtest-x 容器:请先在 Docker 管理中部署(映射一个宿主端口到容器 80),完成后回到本页测速。正在跳转到 Docker 管理…";
-                await Task.Delay(1200); // 让用户看到提示再跳转
-                GoToDockerPage();
+                SpeedStatus.Text = "未找到 speedtest-x 容器,等待选择获取方式…";
+                var choice = await AskMissingSpeedtestAsync();
+                if (choice == ContentDialogResult.Primary)
+                {
+                    OpenReleasesPage();
+                    SpeedStatus.Text =
+                        $"已打开下载页:下载后把其中 img\\ 里的 {LocalImageFileName} 放到本应用目录的 img\\ 下," +
+                        $"再到「Docker 管理 → 部署容器」点「建议镜像」离线导入。";
+                }
+                else if (choice == ContentDialogResult.Secondary)
+                {
+                    GoToDockerPage();
+                }
+                else
+                {
+                    SpeedStatus.Text = "已取消:准备好 speedtest-x 容器后再回来测速。";
+                }
                 return;
             }
 
@@ -253,6 +267,71 @@ public sealed partial class NetworkToolsPage : Page
 
     /// <summary>跳转到 Docker 管理页(经侧栏选中触发导航,保持高亮同步)。</summary>
     private static void GoToDockerPage() => MainWindow.Instance?.NavigateByTag("docker");
+
+    /// <summary>Releases 页面:随安装包附带 speedtest-x 的本地镜像 tar,供离线导入。</summary>
+    private const string ReleasesUrl = "https://github.com/Fontaine-superstar/NasToolBox/releases";
+
+    /// <summary>随包镜像的文件名(下载后放到本应用目录的 img\ 下即可被「建议镜像」识别)。</summary>
+    private const string LocalImageFileName = "badapple9_speedtest-x(latest).tar";
+
+    private static void OpenReleasesPage()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(ReleasesUrl) { UseShellExecute = true });
+        }
+        catch
+        {
+            // 打不开浏览器也不影响用户手动复制链接
+        }
+    }
+
+    /// <summary>
+    /// NAS 上没有 speedtest-x 容器时的引导:要么在线拉取,要么从 Releases 下载本地镜像 tar 离线导入。
+    /// 返回用户选择:主按钮=打开下载页,次按钮=去 Docker 管理,关闭=取消。
+    /// </summary>
+    private async Task<ContentDialogResult> AskMissingSpeedtestAsync()
+    {
+        var panel = new StackPanel { Spacing = 8 };
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "测速需要 NAS 上有 badapple9/speedtest-x 容器,当前没有找到。两种获取方式:",
+            TextWrapping = TextWrapping.Wrap,
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = "1) 在线拉取:到「Docker 管理 → 部署容器」,镜像填 badapple9/speedtest-x,勾选「部署前先拉取镜像」" +
+                   "(需 NAS 能联网,镜像约 460 MB)。",
+            TextWrapping = TextWrapping.Wrap,
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"2) 离线导入:从下面的 Releases 页下载安装包,把其中 img\\ 目录里的 {LocalImageFileName} " +
+                   $"放到本应用目录的 img\\ 下,再在部署对话框里点「建议镜像」,程序会自动上传并 docker load," +
+                   $"不需要联网拉取。",
+            TextWrapping = TextWrapping.Wrap,
+        });
+        panel.Children.Add(new HyperlinkButton
+        {
+            Content = ReleasesUrl,
+            NavigateUri = new Uri(ReleasesUrl),
+            Padding = new Thickness(0),
+        });
+
+        var dlg = new ContentDialog
+        {
+            Title = "未找到 speedtest-x 容器",
+            Content = panel,
+            PrimaryButtonText = "打开 Releases 下载页",
+            SecondaryButtonText = "去 Docker 管理部署",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = XamlRoot,
+        };
+
+        return await dlg.ShowAsync();
+    }
 
     // ---------- 内嵌网页端测速 ----------
 
