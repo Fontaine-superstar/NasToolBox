@@ -1,6 +1,6 @@
-using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.UI;
+using NasToolbox.Services;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -76,7 +76,7 @@ public sealed partial class SplashWindow : Window
 
         try
         {
-            VerText.Text = "v" + VersionText();
+            VerText.Text = VersionText();
         }
         catch
         {
@@ -286,13 +286,8 @@ public sealed partial class SplashWindow : Window
             : Color.FromArgb(255, 0xF3, 0xF3, 0xF3);
     }
 
-    /// <summary>取程序集版本的主版本.次版本.修订号(如 0.2.0)。</summary>
-    private static string VersionText()
-    {
-        var v = Assembly.GetExecutingAssembly().GetName().Version;
-        if (v is null) return "0.2.0";
-        return v.Build > 0 ? $"{v.Major}.{v.Minor}.{v.Build}" : $"{v.Major}.{v.Minor}";
-    }
+    /// <summary>取界面显示用的版本串(如 beta1.0.0)。</summary>
+    private static string VersionText() => AppVersion.Display;
 
     [DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int valueSize);
