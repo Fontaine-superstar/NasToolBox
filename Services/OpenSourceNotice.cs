@@ -54,38 +54,29 @@ public static class OpenSourceNotice
             };
             panel.Children.Add(privacy);
 
-            // 赞赏码:可折叠展开,默认收起,不打扰主流程
-            var donateImage = new Image
+            // 赞赏码:直接平铺展示
+            var donateGroup = new StackPanel { Spacing = 6 };
+            donateGroup.Children.Add(new TextBlock
+            {
+                Text = "赞赏开发者(可选)",
+                FontSize = 13,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            });
+            donateGroup.Children.Add(new Image
             {
                 Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(
                     new Uri("ms-appx:///Assets/Images/DonateQR.jpg")),
                 Width = 200,
                 HorizontalAlignment = HorizontalAlignment.Center,
-                Visibility = Visibility.Collapsed,
-            };
-            var donateExpander = new Expander
+            });
+            donateGroup.Children.Add(new TextBlock
             {
-                Header = new TextBlock { Text = "赞赏开发者(可选)", FontSize = 13 },
-                Content = new StackPanel
-                {
-                    Spacing = 6,
-                    Children =
-                    {
-                        donateImage,
-                        new TextBlock
-                        {
-                            Text = "微信扫码,请作者喝杯咖啡。完全自愿,不影响任何功能。",
-                            FontSize = 12,
-                            Opacity = 0.7,
-                            TextWrapping = TextWrapping.Wrap,
-                        },
-                    },
-                },
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-            };
-            donateExpander.Expanding += (_, _) => donateImage.Visibility = Visibility.Visible;
-            donateExpander.Collapsed += (_, _) => donateImage.Visibility = Visibility.Collapsed;
-            panel.Children.Add(donateExpander);
+                Text = "微信扫码,请作者喝杯咖啡。完全自愿,不影响任何功能。",
+                FontSize = 12,
+                Opacity = 0.7,
+                TextWrapping = TextWrapping.Wrap,
+            });
+            panel.Children.Add(donateGroup);
 
             var dialog = new ContentDialog
             {
