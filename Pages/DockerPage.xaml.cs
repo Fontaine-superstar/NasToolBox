@@ -9,11 +9,17 @@ namespace NasToolbox.Pages;
 
 /// <summary>
 /// Docker 容器管理:选择已添加的 NAS 设备,经 SSH 列出容器并执行启动 / 停止 / 重启 / 删除 / 看日志。
-/// 需要 root 的命令由设备自身的 sudo 配置决定。
+/// 需要 root 的命令依赖设备配置的「root 会话」权限模式。
 /// </summary>
 public sealed partial class DockerPage : Page
 {
     private readonly List<NasDevice> _devices = new();
+
+    /// <summary>
+    /// 由「网络诊断 → 测速」跳转过来时置 true:进页面后自动打开部署对话框并预填 speedtest-x,
+    /// 否则用户跳过来只看到空列表,不知道要做什么。
+    /// </summary>
+    public static bool PendingSpeedtestDeploy { get; set; }
 
     public DockerPage()
     {
@@ -26,6 +32,43 @@ public sealed partial class DockerPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         if (IsLoaded) ReloadDevices();
+
+        if (PendingSpeedtestDeploy)
+        {
+            PendingSpeedtestDeploy = false;
+            _ = ShowSpeedtestDeployHintAsync();
+        }
+    }
+
+    /// <summary>测速引导:预填 badapple9/speedtest-x 并打开部署对话框,附端口映射说明。</summary>
+    private async Task ShowSpeedtestDeployHintAsync()
+    {
+        await Task.Delay(200); // 等页面布局完成再弹,避免对话框取不到 XamlRoot
+
+        _settingSuggest = true;
+        CdImageBox.Text = "badapple9/speedtest-x";
+        _settingSuggest = false;
+        CdNameBox.Text = "speedtest-x";
+        CdPortsBox.Text = "9000:80"; // 宿主 9000 → 容器 80,被占用时改宿主端口即可
+        CdRestartBox.SelectedIndex = 0;
+        CdPullBox.IsChecked = true;
+        _suggestLocalTar = string.Empty;
+
+        var locals = DockerService.ListLocalImageFiles();
+        SuggestList.ItemsSource = locals;
+        SuggestPanel.Visibility = locals.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        ShowCdError(
+            locals.Count > 0
+                ? "测速需要 badapple9/speedtest-x 容器。已预填镜像与容器名,勾选「部署前先拉取镜像」可在线拉取;" +
+                  "也可点上方「建议镜像」用随包 tar 离线导入(不走拉取)。端口映射形如 宿主端口:80," +
+                  "9000 被占用就换一个,部署完回网络诊断页测速。"
+                : "测速需要 badapple9/speedtest-x 容器。已预填镜像与容器名,保持勾选「部署前先拉取镜像」即可在线拉取" +
+                  "(约 460 MB,需 NAS 能联网);本机 img\\ 目录下没有离线镜像 tar 时只能在线拉取。" +
+                  "端口映射形如 宿主端口:80,9000 被占用就换一个,部署完回网络诊断页测速。",
+            InfoBarSeverity.Informational);
+
+        _ = CreateDialog.ShowAsync();
     }
 
     private NasDevice? Current => DeviceBox.SelectedItem as NasDevice;
@@ -308,9 +351,11 @@ public sealed partial class DockerPage : Page
         return "";
     }
 
-    private void ShowCdError(string message)
+    /// <summary>在部署对话框里显示一条提示;校验失败用默认 Error,纯说明用 Informational。</summary>
+    private void ShowCdError(string message, InfoBarSeverity severity = InfoBarSeverity.Error)
     {
         CdError.Message = message;
+        CdError.Severity = severity;
         CdError.IsOpen = true;
     }
 

@@ -216,7 +216,7 @@ public sealed partial class NetworkToolsPage : Page
                 }
                 else if (choice == ContentDialogResult.Secondary)
                 {
-                    GoToDockerPage();
+                    GoToDockerPage(hintSpeedtest: true);
                 }
                 else
                 {
@@ -266,7 +266,12 @@ public sealed partial class NetworkToolsPage : Page
     }
 
     /// <summary>跳转到 Docker 管理页(经侧栏选中触发导航,保持高亮同步)。</summary>
-    private static void GoToDockerPage() => MainWindow.Instance?.NavigateByTag("docker");
+    /// <summary>跳转 Docker 管理页;hintSpeedtest=true 时让对方页面自动弹出预填好的部署对话框。</summary>
+    private static void GoToDockerPage(bool hintSpeedtest = false)
+    {
+        if (hintSpeedtest) DockerPage.PendingSpeedtestDeploy = true;
+        MainWindow.Instance?.NavigateByTag("docker");
+    }
 
     /// <summary>Releases 页面:随安装包附带 speedtest-x 的本地镜像 tar,供离线导入。</summary>
     private const string ReleasesUrl = "https://github.com/Fontaine-superstar/NasToolBox/releases";
