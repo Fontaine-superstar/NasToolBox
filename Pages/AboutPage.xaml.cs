@@ -22,5 +22,11 @@ public sealed partial class AboutPage : Page
 
     /// <summary>弹出与首次启动相同的开源声明(不写「已读」标记,不影响首启逻辑)。</summary>
     private void ShowNoticeButton_Click(object sender, RoutedEventArgs e)
-        => OpenSourceNotice.ShowDialog(Window.Current);
+    {
+        // Window.Current 在页面事件处理器里可能为 null(非窗口线程上下文),
+        // 用 App.MainWin / MainWindow.Instance 拿真实主窗口,Content.XamlRoot 此时必然就绪。
+        var win = App.MainWin ?? (Window?)MainWindow.Instance;
+        if (win is null) return;
+        OpenSourceNotice.ShowDialog(win);
+    }
 }
