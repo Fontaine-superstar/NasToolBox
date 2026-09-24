@@ -78,21 +78,21 @@
 | 18 | `lsblk -Jdnb -o NAME,SIZE,ROTA,TRAN,MODEL; echo ---SMART---; for d in $(lsblk ...); do ... smartctl -H /dev/$d ...; done` | 物理硬盘列表 + SMART 健康自评 |
 
 ### 文件管理
-
+![屏幕截图 2026-09-24 215015.png](photo/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-09-24%20215015.png)
 - 共享列表并入主列表:双击进入共享,`UpBtn` 回到共享列表
 - 拖拽:外部文件拖入列表即上传;列表文件拖到资源管理器 / 桌面即下载
 - 右键菜单:映射为网络驱动器、在资源管理器中打开、断开映射、复制网络路径、下载所选、删除所选
 - 映射使用 `WNetAddConnection2`,凭据复用该设备已保存的 SSH 账号密码,不经命令行、不落盘
 
 ### Docker
-
+![屏幕截图 2026-09-24 191841.png](photo/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-09-24%20191841.png)
 - 容器:列表 / 启动 / 停止 / 重启 / 删除 / 日志 / 详情
 - 镜像:列表 / 拉取 / 删除 / 导入离线 tar
 - compose 项目列表(优先 `docker compose`,回退 `docker-compose`)
 - 需要 SSH 登录用户在 NAS 的 `docker` 组里,否则命令无权限
 
 ### 网络诊断
-
+![屏幕截图 2026-09-24 191836.png](photo/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-09-24%20191836.png)
 - Ping:目标、次数、丢包率与三档延迟
 - NAS 外网诊断:选一台 NAS,**在 NAS 上执行** ping,判断 NAS 自己能不能出网
 - 端口探测:常用 NAS 端口一键 TCP 连通性扫描
@@ -134,7 +134,7 @@
 - 源代码可自由使用、修改和分发
 - 衍生作品必须以相同协议开源
 
-致谢:项目骨架衍生自 [luolangaga/tubatools](https://github.com/luolangaga/tubatools)(TubaWinUi3,GPL-3.0);内嵌的 [xterm.js](https://github.com/xtermjs/xterm.js)(MIT)位于 `Assets/Terminal/`。
+
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Fontaine-superstar/NasToolBox&type=Date)](https://star-history.com/#Fontaine-superstar/NasToolBox&type=Date)
 
