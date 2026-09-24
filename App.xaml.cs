@@ -34,6 +34,9 @@ public partial class App : Application
 
         MainWin.Activate();
 
+        // 首次启动弹开源声明(GPL-3.0 + 数据存放说明),同意后落标记,之后不再弹
+        OpenSourceNotice.ShowIfFirstLaunch(MainWin);
+
         try
         {
             splash.Close();
