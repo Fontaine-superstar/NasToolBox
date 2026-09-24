@@ -60,6 +60,29 @@
 - 内存行显示内存条型号(需 root;虚拟机无 DMI 时显示「—」属正常)
 - 公网 IP 通过 NAS 侧 curl 查询,避免拿到本机出口 IP
 
+采集由一条 SSH 命令组一次性下发,命令与采集内容对照如下:
+
+| # | 命令 | 采集内容 |
+| --- | --- | --- |
+| 1 | `uptime` | 在线时长、负载 |
+| 2 | `nproc 2>/dev/null \|\| grep -c ^processor /proc/cpuinfo` | CPU 核心数 |
+| 3 | `grep -E 'MemTotal\|MemAvailable\|MemFree' /proc/meminfo` | 内存总量 / 可用 |
+| 4 | `df -hP -x tmpfs -x devtmpfs -x overlay 2>/dev/null \|\| df -hP ... \|\| df -h` | 磁盘空间(多级回退兼容) |
+| 5 | `cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null \|\| echo -1` | 主温度 |
+| 6 | `cat /proc/uptime` | 开机秒数(走秒) |
+| 7 | `for n in /sys/class/net/*; do ... echo "IF1\|$i\|MAC\|状态\|速率\|rx_bytes\|tx_bytes"; done` | 网卡列表(第一次采样) |
+| 8 | `sleep 1` | 间隔 1 秒(算实时速率用) |
+| 9 | `for n in /sys/class/net/*; do ... echo "IF2\|$i\|rx\|tx"; done` | 网卡流量(第二次采样) |
+| 10 | `ip -o -4 addr show 2>/dev/null` | 各网卡 IPv4 |
+| 11 | `ip route show default 2>/dev/null \| head -1` | 默认网关 |
+| 12 | `grep nameserver /etc/resolv.conf 2>/dev/null` | DNS |
+| 13 | `curl -s --max-time 3 https://ip.3322.net \|\| curl ... api.ipify.org \|\| wget ...(共 4 级回退,3 秒超时)` | 公网 IP(NAS 侧出口查询) |
+| 14 | `grep -m1 '^model name' /proc/cpuinfo \|\| grep -m1 '^Hardware' ... \|\| uname -m` | CPU 型号(x86 / ARM 回退) |
+| 15 | `for z in /sys/class/thermal/thermal_zone*; ...; for s in /sys/class/hwmon/hwmon*; ...` | 全部温度传感器(thermal zone + hwmon) |
+| 16 | `lspci 2>/dev/null \| grep -Ei 'vga\|3d controller\|display controller' \| head -4` | GPU 型号 |
+| 17 | `PATH=$PATH:/usr/sbin:/sbin; dmidecode -t 17 ...(需 root)` | 内存条型号 |
+| 18 | `lsblk -Jdnb -o NAME,SIZE,ROTA,TRAN,MODEL; echo ---SMART---; for d in $(lsblk ...); do ... smartctl -H /dev/$d ...; done` | 物理硬盘列表 + SMART 健康自评 |
+
 ### 文件管理
 
 - 共享列表并入主列表:双击进入共享,`UpBtn` 回到共享列表
