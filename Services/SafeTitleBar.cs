@@ -5,7 +5,7 @@ using Windows.UI;
 namespace NasToolbox.Services;
 
 /// <summary>
-/// "高版一体化标题栏"(参考 TubaWinUi3 的 SafeTitleBar.ApplyExtendedTall):
+/// "高版一体化标题栏":
 ///   1. Window.ExtendsContentIntoTitleBar = true          → XAML 内容延伸进系统标题栏(消灭上下两条栏)
 ///   2. AppWindow.TitleBar.PreferredHeightOption = Tall    → 系统标题栏升高为 48px,与 TitleBar 控件对齐
 ///   3. Window.SetTitleBar(TitleBar 控件)                  → 指定拖拽区(控件内交互元素仍可点击)
