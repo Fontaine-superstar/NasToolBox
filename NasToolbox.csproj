@@ -23,9 +23,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- 程序集版本(数字四段):1.0.0 -->
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <!-- 界面显示的版本串:启动画面与「关于」页读 InformationalVersion 显示此值 -->
-    <InformationalVersion>beta1.0.0</InformationalVersion>
+    <InformationalVersion>1.0.1</InformationalVersion>
     <!-- 不要把源码提交号追加到 InformationalVersion 后面(否则会显示成 beta1.0.0+<sha>) -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <!-- 自包含发布:把 .NET 运行时一起带上,目标机无需预装 .NET(此前默认依赖框架,换机就跑不起来) -->
